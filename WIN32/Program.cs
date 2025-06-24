@@ -1,0 +1,1 @@
+﻿UefiSettings.ListUefiVariables();
