@@ -1,3 +1,4 @@
+[![Publish ClipboardGuardApp](https://github.com/jar99/DemoWV2/actions/workflows/publish-clipboardguard.yml/badge.svg)](https://github.com/jar99/DemoWV2/actions/workflows/publish-clipboardguard.yml)
 # Desktop and Web Integration Suite
 
 This repository serves as an experimental playground for testing the capabilities of C# .NET on Windows. It contains a
@@ -32,7 +33,7 @@ The solution is divided into several key projects, grouped by functionality:
   React-based user interface, which is served by an ASP.NET Core backend (`Server.API`). This architecture demonstrates
   a powerful pattern for building native-feeling applications with web technologies.
 
-- **Advanced Clipboard Management (`ClipboardGuardApp`)**: A utility that showcases secure clipboard handling. It
+- **Advanced Clipboard Management (`ClipboardGuardApp`)**: [Latest Release](https://github.com/jar99/DemoWV2/releases/latest) A utility that showcases secure clipboard handling. It
   monitors clipboard activity and can **optionally clear** any copied content when the application loses focus, preventing
   sensitive data from being accidentally exposed. The application now provides **detailed information about the source**
   of pasted content, including the **process name, window title, and window class**, and can also identify the **type of
@@ -169,3 +170,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 > Windows bindings and non-standard features. Many components interact with the operating system at a low level (e.g.,
 > clipboard monitoring, UEFI access). Use these features responsibly and only on systems you own and have permission to
 > test on.
+
+

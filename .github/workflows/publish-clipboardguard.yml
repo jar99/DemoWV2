@@ -51,13 +51,13 @@ jobs:
           
           # Construct AssemblyVersion and FileVersion (e.g., 1.0.0.123)
           ASSEMBLY_FILE_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}"
-
+          
           # Construct Product/Package Version (SemVer-compliant, e.g., 1.0.0 or 1.0.0-beta.123)
-          PRODUCT_VERSION="${{ github.event.inputs.version }}"
-          if [ "${{ github.event.inputs.release_type }}" != "release" ]; then
-            PRODUCT_VERSION="${{ github.event.inputs.version }}-${{ github.event.inputs.release_type }}.${{ github.run_number }}"
-          fi
-
+          $PRODUCT_VERSION = "${{ github.event.inputs.version }}"
+          if ("${{ github.event.inputs.release_type }}" -ne "release") {
+            $PRODUCT_VERSION = "${{ github.event.inputs.version }}-${{ github.event.inputs.release_type }}.${{ github.run_number }}"
+          }
+          
           # Construct AssemblyInformationalVersion (detailed human-readable, e.g., 1.0.0.123-prerelease-Debug)
           INFORMATIONAL_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
 
