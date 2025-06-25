@@ -5,11 +5,13 @@ namespace ClipboardGuardApp
 {
     public class MainForm : Form
     {
-        private TextBox contentTextBox;
-        private Label infoLabel;
-        private Label sourceInfoLabel; // To display the paste source
-        private string internalClipboard = ""; // To hold text copied from this app
-        private string lastPastedText = ""; // To prevent duplicate pasting
+        private readonly TextBox _contentTextBox;
+        private readonly Label _infoLabel;
+        private readonly Label _sourceInfoLabel; // To display the paste source
+        private string _internalClipboard = ""; // To hold text copied from this app
+        private string _lastPastedText = ""; // To prevent duplicate pasting
+
+        private readonly bool _clearClipboard;
 
         // --- P/Invoke declarations for Windows API functions ---
 
@@ -19,92 +21,65 @@ namespace ClipboardGuardApp
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
-        public MainForm()
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern int GetWindowTextLength(IntPtr hWnd);
+
+        private const int MaxClassNameLength = 256;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern int GetClassName(IntPtr hWnd, System.Text.StringBuilder lpClassName, int nMaxCount);
+
+        private string GetWindowTitle(IntPtr ownerHwnd)
         {
-            Console.WriteLine("Application starting. Initializing main form...");
-            // --- Form Initialization ---
-            this.Text = "Clipboard Guard";
-            this.Size = new Size(450, 400);
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.BackColor = Color.FromArgb(240, 240, 240);
-            this.FormBorderStyle = FormBorderStyle.Sizable;
-            this.MinimumSize = new Size(300, 200);
+            Console.WriteLine(
+                $"Attempting to find window title for HWND: {ownerHwnd} (0x{ownerHwnd:X})");
 
-            // --- Control Initialization ---
-            // The order of creation and adding is important for correct docking.
+            int length = GetWindowTextLength(ownerHwnd);
+            if (length > 0)
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder(length + 1);
+                if (GetWindowText(ownerHwnd, sb, sb.Capacity) > 0)
+                {
+                    string windowTitle = sb.ToString();
+                    Console.WriteLine(
+                        $"Found window title '{windowTitle}' for HWND: {ownerHwnd} (0x{ownerHwnd:X})");
+                    return windowTitle;
+                }
 
-            // --- Text Box (Fill) ---
-            contentTextBox = new TextBox();
-            contentTextBox.Multiline = true;
-            contentTextBox.Dock = DockStyle.Fill;
-            contentTextBox.ScrollBars = ScrollBars.Vertical;
-            contentTextBox.Font = new Font("Consolas", 11F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(0)));
-            contentTextBox.BackColor = Color.White;
-            contentTextBox.ForeColor = Color.FromArgb(30, 30, 30);
-            contentTextBox.BorderStyle = BorderStyle.FixedSingle;
-            
-            // --- Info Label (Top) ---
-            infoLabel = new Label();
-            infoLabel.Text = "Paste content into this window. The clipboard will be cleared when you switch to another window.";
-            infoLabel.Dock = DockStyle.Top;
-            infoLabel.TextAlign = ContentAlignment.MiddleCenter;
-            infoLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, ((byte)(0)));
-            infoLabel.Padding = new Padding(10);
-            infoLabel.Height = 60;
+                Console.WriteLine(
+                    $"Could not retrieve window text for HWND: {ownerHwnd} (0x{ownerHwnd:X}). GetWindowText returned 0. Error: {Marshal.GetLastWin32Error()}");
+            }
+            else
+            {
+                Console.WriteLine(
+                    $"Window text length is 0 for HWND: {ownerHwnd} (0x{ownerHwnd:X}).");
+            }
 
-            // --- Source Info Label (Bottom) ---
-            sourceInfoLabel = new Label();
-            sourceInfoLabel.Text = "Paste source will be shown here.";
-            sourceInfoLabel.Dock = DockStyle.Bottom;
-            sourceInfoLabel.TextAlign = ContentAlignment.MiddleCenter;
-            sourceInfoLabel.Font = new Font("Segoe UI", 9F, FontStyle.Italic, GraphicsUnit.Point, ((byte)(0)));
-            sourceInfoLabel.Padding = new Padding(5);
-            sourceInfoLabel.Height = 30;
-
-            // --- Add Controls to Form ---
-            // Add the Fill control first to ensure it occupies the available space correctly.
-            this.Controls.Add(contentTextBox);
-            this.Controls.Add(infoLabel);
-            this.Controls.Add(sourceInfoLabel);
-
-            // --- Event Handlers ---
-            this.Activated += MainForm_Activated;
-            this.Deactivate += MainForm_Deactivated;
-            contentTextBox.KeyDown += ContentTextBox_KeyDown;
-            Console.WriteLine("Main form initialized successfully.");
+            Console.WriteLine(
+                $"No window title found for HWND: {ownerHwnd} (0x{ownerHwnd:X})");
+            return "Unknown Window";
         }
 
-        private void ContentTextBox_KeyDown(object sender, KeyEventArgs e)
+        private string GetWindowClass(IntPtr ownerHwnd)
         {
-            if (e.Control && e.KeyCode == Keys.C)
+            System.Text.StringBuilder sb = new System.Text.StringBuilder(MaxClassNameLength);
+
+            int actualLength = GetClassName(ownerHwnd, sb, sb.Capacity);
+
+            if (actualLength > 0)
             {
-                if (!string.IsNullOrEmpty(contentTextBox.SelectedText))
-                {
-                    Console.WriteLine("Copy action (Ctrl+C) detected inside the app.");
-                    internalClipboard = contentTextBox.SelectedText;
-                }
+                string windowClass = sb.ToString();
+                Console.WriteLine(
+                    $"Found window class '{windowClass}' (Actual Length: {actualLength}) for HWND: {ownerHwnd} (0x{ownerHwnd:X})");
+                return windowClass;
             }
-            else if (e.Control && e.KeyCode == Keys.X)
-            {
-                if (!string.IsNullOrEmpty(contentTextBox.SelectedText))
-                {
-                    Console.WriteLine("Cut action (Ctrl+X) detected inside the app.");
-                    internalClipboard = contentTextBox.SelectedText;
-                }
-            }
-            else if (e.Control && e.KeyCode == Keys.V)
-            {
-                Console.WriteLine("Manual Paste action (Ctrl+V) detected. Checking clipboard owner.");
-                // Since this is a manual paste, we should update our last pasted text tracker.
-                if (Clipboard.ContainsText())
-                {
-                    lastPastedText = Clipboard.GetText();
-                }
-                string ownerProcessName = GetClipboardOwnerProcessName();
-                sourceInfoLabel.Text = $"Pasted from: {ownerProcessName}";
-                Console.WriteLine($"Paste source identified as: {ownerProcessName}");
-            }
+
+            Console.WriteLine(
+                $"Could not retrieve window class for HWND: {ownerHwnd} (0x{ownerHwnd:X}). GetClassName returned {actualLength}. Error: {Marshal.GetLastWin32Error()}");
+            return "Unknown Class";
         }
 
         private string GetClipboardOwnerProcessName()
@@ -117,20 +92,23 @@ namespace ClipboardGuardApp
                 return "a non-window application";
             }
 
-            uint processId;
-            GetWindowThreadProcessId(ownerHwnd, out processId);
+            string windowTitle = GetWindowTitle(ownerHwnd);
+            string windowClass = GetWindowClass(ownerHwnd);
+
+            GetWindowThreadProcessId(ownerHwnd, out var processId);
 
             if (processId == 0)
             {
                 Console.WriteLine("Could not determine process ID from window handle.");
-                return "Unknown";
+                return $"Unknown process (Window: '{windowTitle}', Class: '{windowClass}')";
             }
 
             try
             {
                 Process p = Process.GetProcessById((int)processId);
-                Console.WriteLine($"Successfully found process: {p.ProcessName} with ID: {processId}");
-                return p.ProcessName + ".exe";
+                Console.WriteLine(
+                    $"Successfully found process: {p.ProcessName} (ID: {processId}, Main Window: '{p.MainWindowTitle}')");
+                return $"{p.ProcessName}.exe (Window: '{windowTitle}, Class: '{windowClass}')";
             }
             catch (ArgumentException)
             {
@@ -139,69 +117,238 @@ namespace ClipboardGuardApp
             }
         }
 
-        private void MainForm_Activated(object sender, EventArgs e)
+        private string CheckClipboardContent()
+        {
+            if (Clipboard.ContainsFileDropList())
+            {
+                return "File Drop List";
+            }
+
+            if (Clipboard.ContainsImage())
+            {
+                return "Image";
+            }
+
+            if (Clipboard.ContainsAudio())
+            {
+                return "Audio";
+            }
+
+            if (Clipboard.ContainsText())
+            {
+                // If it contains text, check for more specific text formats for better detail.
+                IDataObject? data = Clipboard.GetDataObject();
+                if (data == null)
+                    return "Plain Text"; // Should not be null if Clipboard.ContainsText() is true, but for safety.
+                if (data.GetDataPresent(DataFormats.Rtf))
+                {
+                    return "RTF Text";
+                }
+
+                if (data.GetDataPresent(DataFormats.Html))
+                {
+                    return "HTML Text";
+                }
+
+                if (data.GetDataPresent(DataFormats.CommaSeparatedValue))
+                {
+                    return "CSV Text";
+                }
+
+                if (data.GetDataPresent(DataFormats.UnicodeText))
+                {
+                    return "Unicode Text"; // Most common plain text format
+                }
+
+                // Fallback for other text types not explicitly handled but detected by ContainsText()
+                return "Plain Text";
+            }
+
+            // If none of the common types above were found, check if any data is present at all
+            IDataObject? genericData = Clipboard.GetDataObject();
+            if (genericData == null) return "None"; // No content detected
+            string[] formats = genericData.GetFormats();
+            if (formats.Length > 0)
+            {
+                // Return the first format name found if it's an "OTHER" type
+                return $"OTHER ({formats[0]})";
+            }
+
+            return "None"; // No content detected
+        }
+
+        private MainForm(bool clearClipboard = false)
+        {
+            Console.WriteLine("Application starting. Initializing main form...");
+            _clearClipboard = clearClipboard;
+
+            // --- Form Initialization ---
+            base.Text = "Clipboard Guard";
+            Size = new Size(450, 400);
+            StartPosition = FormStartPosition.CenterScreen;
+            base.BackColor = Color.FromArgb(240, 240, 240);
+            FormBorderStyle = FormBorderStyle.Sizable;
+            base.MinimumSize = new Size(300, 200);
+
+            // --- Control Initialization ---
+            // The order of creation and adding is important for correct docking.
+
+            // --- Text Box (Fill) ---
+            _contentTextBox = new TextBox();
+            _contentTextBox.Multiline = true;
+            _contentTextBox.Dock = DockStyle.Fill;
+            _contentTextBox.ScrollBars = ScrollBars.Vertical;
+            _contentTextBox.Font = new Font("Consolas", 11F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            _contentTextBox.BackColor = Color.White;
+            _contentTextBox.ForeColor = Color.FromArgb(30, 30, 30);
+            _contentTextBox.BorderStyle = BorderStyle.FixedSingle;
+
+            // --- Info Label (Top) ---
+            _infoLabel = new Label();
+            _infoLabel.Text =
+                "Paste content into this window. The clipboard will be cleared when you switch to another window.";
+            _infoLabel.Dock = DockStyle.Top;
+            _infoLabel.TextAlign = ContentAlignment.MiddleCenter;
+            _infoLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            _infoLabel.Padding = new Padding(10);
+            _infoLabel.Height = 60;
+
+            // --- Source Info Label (Bottom) ---
+            _sourceInfoLabel = new Label();
+            _sourceInfoLabel.Text = "Paste source will be shown here.";
+            _sourceInfoLabel.Dock = DockStyle.Bottom;
+            _sourceInfoLabel.TextAlign = ContentAlignment.MiddleCenter;
+            _sourceInfoLabel.Font = new Font("Segoe UI", 9F, FontStyle.Italic, GraphicsUnit.Point, 0);
+            _sourceInfoLabel.Padding = new Padding(5);
+            _sourceInfoLabel.Height = 30;
+
+            // --- Add Controls to Form ---
+            // Add the Fill control first to ensure it occupies the available space correctly.
+            Controls.Add(_contentTextBox);
+            Controls.Add(_infoLabel);
+            Controls.Add(_sourceInfoLabel);
+
+            // --- Event Handlers ---
+            Activated += MainForm_Activated;
+            Deactivate += MainForm_Deactivated;
+            _contentTextBox.KeyDown += ContentTextBox_KeyDown;
+            Console.WriteLine("Main form initialized successfully.");
+        }
+
+        private void ContentTextBox_KeyDown(object? sender, KeyEventArgs e)
+        {
+            switch (e.Control)
+            {
+                case true when e.KeyCode == Keys.C:
+                {
+                    if (!string.IsNullOrEmpty(_contentTextBox.SelectedText))
+                    {
+                        Console.WriteLine("Copy action (Ctrl+C) detected inside the app.");
+                        _internalClipboard = _contentTextBox.SelectedText;
+                    }
+
+                    break;
+                }
+                case true when e.KeyCode == Keys.X:
+                {
+                    if (!string.IsNullOrEmpty(_contentTextBox.SelectedText))
+                    {
+                        Console.WriteLine("Cut action (Ctrl+X) detected inside the app.");
+                        _internalClipboard = _contentTextBox.SelectedText;
+                    }
+
+                    break;
+                }
+                case true when e.KeyCode == Keys.V:
+                {
+                    Console.WriteLine("Manual Paste action (Ctrl+V) detected. Checking clipboard owner.");
+
+                    string clipboardContentType = CheckClipboardContent();
+                    Console.WriteLine($"Clipboard contains: {clipboardContentType}");
+
+                    // Since this is a manual paste, we should update our last pasted text tracker.
+                    if (Clipboard.ContainsText())
+                    {
+                        _lastPastedText = Clipboard.GetText();
+                    }
+
+                    string ownerProcessName = GetClipboardOwnerProcessName();
+                    _sourceInfoLabel.Text = $"Pasted {clipboardContentType} from: {ownerProcessName}";
+                    Console.WriteLine($"Paste {clipboardContentType} source identified as: {ownerProcessName}");
+                    break;
+                }
+            }
+        }
+
+        private void MainForm_Activated(object? sender, EventArgs e)
         {
             Console.WriteLine("Main window activated.");
-            this.BackColor = Color.FromArgb(240, 240, 240);
-            infoLabel.Text = "Window is Active. You can paste content here.";
-            
-            if (!string.IsNullOrEmpty(internalClipboard) && !Clipboard.ContainsText())
+            base.BackColor = Color.FromArgb(240, 240, 240);
+            _infoLabel.Text = "Window is Active. You can paste content here.";
+
+            if (!string.IsNullOrEmpty(_internalClipboard) && !Clipboard.ContainsText())
             {
                 Console.WriteLine("Restoring internal clipboard content to system clipboard.");
-                Clipboard.SetText(internalClipboard);
+                Clipboard.SetText(_internalClipboard);
             }
 
             // Ensure the textbox has focus and then paste content automatically if it's new.
-            this.BeginInvoke((MethodInvoker)delegate {
-                contentTextBox.Focus();
+            BeginInvoke((MethodInvoker)delegate
+            {
+                _contentTextBox.Focus();
                 Console.WriteLine("Focus set to the main text box.");
 
+                string clipboardContentType = CheckClipboardContent();
+                Console.WriteLine($"Clipboard contains: {clipboardContentType}");
+
                 // Automatically paste content if there is new text on the clipboard
-                if (Clipboard.ContainsText())
+                if (!Clipboard.ContainsText()) return;
+
+                string currentClipboardText = Clipboard.GetText();
+                if (currentClipboardText != _lastPastedText)
                 {
-                    string currentClipboardText = Clipboard.GetText();
-                    if (currentClipboardText != lastPastedText)
-                    {
-                        Console.WriteLine("New clipboard content detected. Automatically appending text.");
-                        // Append text to avoid overwriting and add a newline for clarity.
-                        contentTextBox.AppendText(currentClipboardText + Environment.NewLine);
-                        lastPastedText = currentClipboardText; // Update tracker
-                        
-                        // After pasting, detect the source
-                        string ownerProcessName = GetClipboardOwnerProcessName();
-                        sourceInfoLabel.Text = $"Pasted from: {ownerProcessName}";
-                        Console.WriteLine($"Paste source identified as: {ownerProcessName}");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Clipboard content is the same as last paste. Skipping auto-paste.");
-                    }
+                    Console.WriteLine("New clipboard content detected. Automatically appending text.");
+                    // Append text to avoid overwriting and add a newline for clarity.
+                    _contentTextBox.AppendText(currentClipboardText + Environment.NewLine);
+                    _lastPastedText = currentClipboardText; // Update tracker
+
+                    // After pasting, detect the source
+                    string ownerProcessName = GetClipboardOwnerProcessName();
+                    _sourceInfoLabel.Text = $"Pasted from: {ownerProcessName}";
+                    Console.WriteLine($"Paste source identified as: {ownerProcessName}");
+                }
+                else
+                {
+                    Console.WriteLine("Clipboard content is the same as last paste. Skipping auto-paste.");
                 }
             });
         }
 
-        private void MainForm_Deactivated(object sender, EventArgs e)
+        private void MainForm_Deactivated(object? sender, EventArgs e)
         {
             Console.WriteLine("Main window deactivated.");
-            this.BackColor = Color.LightGray;
-            infoLabel.Text = "Window is Inactive. Clipboard has been cleared.";
-            sourceInfoLabel.Text = ""; 
+            base.BackColor = Color.LightGray;
+            _infoLabel.Text = "Window is Inactive. Clipboard has been cleared.";
 
             try
             {
                 if (Clipboard.ContainsText())
                 {
-                    if (Clipboard.GetText() != internalClipboard)
+                    if (Clipboard.GetText() != _internalClipboard)
                     {
-                        Console.WriteLine("External content detected on clipboard. Clearing internal clipboard reference.");
-                        internalClipboard = "";
+                        Console.WriteLine(
+                            "External content detected on clipboard. Clearing internal clipboard reference.");
+                        _internalClipboard = "";
                     }
                 }
-                
-                Console.WriteLine("Clearing system clipboard...");
-                Clipboard.Clear();
-                lastPastedText = ""; // Reset tracker to allow re-pasting of same content later.
-                Console.WriteLine("System clipboard cleared successfully.");
+
+                if (_clearClipboard)
+                {
+                    Console.WriteLine("Clearing system clipboard...");
+                    Clipboard.Clear();
+                    _lastPastedText = ""; // Reset tracker to allow re-pasting of same content later.
+                    Console.WriteLine("System clipboard cleared successfully.");
+                }
             }
             catch (Exception ex)
             {
@@ -210,13 +357,16 @@ namespace ClipboardGuardApp
         }
 
         [STAThread]
-        public static void Main()
+        public static void Main(string[]? args)
         {
+            bool clearClipboard =
+                args?.Any(arg => arg.Equals("--clear-clipboard", StringComparison.OrdinalIgnoreCase)) ?? false;
+
             Console.WriteLine("=====================================");
             Console.WriteLine("Application Main() entry point called.");
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+            Application.Run(new MainForm(clearClipboard: clearClipboard));
             Console.WriteLine("Application closing.");
             Console.WriteLine("=====================================\n");
         }

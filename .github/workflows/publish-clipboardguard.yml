@@ -1,0 +1,58 @@
+name: Publish ClipboardGuardApp
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version (e.g., 1.0.0)'
+        required: true
+
+jobs:
+  build_and_publish:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x' # Or the specific .NET version your project uses
+
+    - name: Restore dependencies
+      run: dotnet restore ClipboardGuardApp/ClipboardGuardApp.csproj
+
+    - name: Build ClipboardGuardApp
+      run: dotnet build ClipboardGuardApp/ClipboardGuardApp.csproj --configuration Release --no-restore
+
+    - name: Publish ClipboardGuardApp
+      run: |
+        dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj \
+          --configuration Release \
+          --runtime win-x64 \
+          --self-contained true \
+          --output publish \
+          /p:UseAppHost=true # Ensure a single .exe is created
+
+    - name: Archive published artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ClipboardGuardApp-Windows-x64
+        path: publish/
+
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        name: ClipboardGuardApp Release v${{ github.event.inputs.version }}
+        body: |
+          ClipboardGuardApp v${{ github.event.inputs.version }}
+          A self-contained executable for Windows (x64).
+        draft: false
+        prerelease: false
+        files: publish/*

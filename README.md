@@ -33,9 +33,10 @@ The solution is divided into several key projects, grouped by functionality:
   a powerful pattern for building native-feeling applications with web technologies.
 
 - **Advanced Clipboard Management (`ClipboardGuardApp`)**: A utility that showcases secure clipboard handling. It
-  monitors clipboard activity and automatically clears any copied content when the application loses focus, preventing
-  sensitive data from being accidentally exposed. The application can also identify the source process of pasted
-  content.
+  monitors clipboard activity and can **optionally clear** any copied content when the application loses focus, preventing
+  sensitive data from being accidentally exposed. The application now provides **detailed information about the source**
+  of pasted content, including the **process name, window title, and window class**, and can also identify the **type of
+  clipboard content** (e.g., text, image, files).
 
 - **Direct Desktop Interaction (`USER` project)**: This project explores drawing directly onto the Windows desktop
   canvas using GDI+ P/Invoke calls. It can render text, shapes, and images as a persistent overlay, offering a practical
@@ -80,7 +81,8 @@ The suite is built on the following key technologies, categorized by function:
 - .NET 9 SDK (or newer)
 - Node.js and npm
 - **One** of the following development environments:
-    - **Visual Studio 2022**: with "ASP.NET and web development" and ".NET desktop development" workloads.
+    - **Visual Studio 2022**: with "ASP.NET and web development", ".NET desktop development", and "Node.js development"
+      workloads.
     - **JetBrains Rider**: 2023.x or newer.
     - **Visual Studio Code**: with the C# Dev Kit extension installed.
 
@@ -132,8 +134,9 @@ A Windows Forms application that monitors and clears the clipboard.
 
 - **Build and Run**:
   ```bash
-  dotnet run --project ClipboardGuardApp/ClipboardGuardApp.csproj
+  dotnet run --project ClipboardGuardApp/ClipboardGuardApp.csproj [--clear-clipboard]
   ```
+  _**Note**: Add `--clear-clipboard` to the command if you want the application to clear the system clipboard when it loses focus. By default, it will not clear._
 
 #### USER Project
 
@@ -153,6 +156,12 @@ A console application for listing UEFI environment variables.
   dotnet run --project WIN32/WIN32.csproj
   ```
   _**Note**: This may require administrative privileges to function correctly._
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

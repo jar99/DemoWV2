@@ -1,47 +1,29 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36203.30 d17.14
+VisualStudioVersion = 17.14.36203.30
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipboardGuardApp", "ClipboardGuardApp\ClipboardGuardApp.csproj", "{55AE8F8D-A04E-432A-8F7D-29031D221016}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WIN", "WIN", "{9BE9FB4E-F921-4A45-B2E8-C342EA56298E}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USER", "USER\USER.csproj", "{4469B38D-8CF4-416C-8D4F-D3A87F1D1067}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WIN32", "WIN32\WIN32.csproj", "{713477BD-0986-4366-93B8-0FF995AFCF9C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipboardGuardApp", "ClipboardGuardApp\ClipboardGuardApp.csproj", "{55AE8F8D-A04E-432A-8F7D-29031D221016}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WV2", "WV2", "{3465C007-B533-4CC3-9C41-AE6C2D11A591}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.API", "WV2\Server.API\Server.API.csproj", "{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9}"
 EndProject
-Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "Server.Client", "WV2\Server.Client\", "{8A3E9C88-5301-443A-A138-2323D1C44A59}"
-	ProjectSection(WebsiteProperties) = preProject
-		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.0"
-		Debug.AspNetCompiler.VirtualPath = "/localhost_3199"
-		Debug.AspNetCompiler.PhysicalPath = "WV2\Server.Client\"
-		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_3199\"
-		Debug.AspNetCompiler.Updateable = "true"
-		Debug.AspNetCompiler.ForceOverwrite = "true"
-		Debug.AspNetCompiler.FixedNames = "false"
-		Debug.AspNetCompiler.Debug = "True"
-		Release.AspNetCompiler.VirtualPath = "/localhost_3199"
-		Release.AspNetCompiler.PhysicalPath = "WV2\Server.Client\"
-		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_3199\"
-		Release.AspNetCompiler.Updateable = "true"
-		Release.AspNetCompiler.ForceOverwrite = "true"
-		Release.AspNetCompiler.FixedNames = "false"
-		Release.AspNetCompiler.Debug = "False"
-		VWDPort = "3199"
-		SlnRelativePath = "WV2\Server.Client\"
-	EndProjectSection
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "Server.Client", "WV2\Server.Client\Server.Client.esproj", "{8D929260-E433-4082-90CB-8440795E835D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows.Client", "WV2\Windows.Client\Windows.Client.csproj", "{E5E63A7E-7FDC-49F2-97D4-9424578E06A6}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WV2", "WV2", "{3465C007-B533-4CC3-9C41-AE6C2D11A591}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WIN", "WIN", "{9BE9FB4E-F921-4A45-B2E8-C342EA56298E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Windows.Client", "WV2\Windows.Client\Windows.Client.csproj", "{BF209C8A-F988-4603-B8DC-55559348867B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
 		README.md = README.md
+		LICENSE = LICENSE
 	EndProjectSection
 EndProject
 Global
@@ -66,14 +48,14 @@ Global
 		{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8A3E9C88-5301-443A-A138-2323D1C44A59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8A3E9C88-5301-443A-A138-2323D1C44A59}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8A3E9C88-5301-443A-A138-2323D1C44A59}.Release|Any CPU.ActiveCfg = Debug|Any CPU
-		{8A3E9C88-5301-443A-A138-2323D1C44A59}.Release|Any CPU.Build.0 = Debug|Any CPU
-		{E5E63A7E-7FDC-49F2-97D4-9424578E06A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E5E63A7E-7FDC-49F2-97D4-9424578E06A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E5E63A7E-7FDC-49F2-97D4-9424578E06A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E5E63A7E-7FDC-49F2-97D4-9424578E06A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF209C8A-F988-4603-B8DC-55559348867B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF209C8A-F988-4603-B8DC-55559348867B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF209C8A-F988-4603-B8DC-55559348867B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF209C8A-F988-4603-B8DC-55559348867B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D929260-E433-4082-90CB-8440795E835D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D929260-E433-4082-90CB-8440795E835D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D929260-E433-4082-90CB-8440795E835D}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D929260-E433-4082-90CB-8440795E835D}.Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,8 +64,8 @@ Global
 		{4469B38D-8CF4-416C-8D4F-D3A87F1D1067} = {9BE9FB4E-F921-4A45-B2E8-C342EA56298E}
 		{713477BD-0986-4366-93B8-0FF995AFCF9C} = {9BE9FB4E-F921-4A45-B2E8-C342EA56298E}
 		{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
-		{8A3E9C88-5301-443A-A138-2323D1C44A59} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
-		{E5E63A7E-7FDC-49F2-97D4-9424578E06A6} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
+		{BF209C8A-F988-4603-B8DC-55559348867B} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
+		{8D929260-E433-4082-90CB-8440795E835D} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8BF95CD5-945E-4E2C-B60A-3A51F30C04AF}
