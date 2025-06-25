@@ -26,6 +26,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		LICENSE = LICENSE
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Workflows", "Workflows", "{80E0C5AD-417B-4D4A-BA76-F73E03BAD35B}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\publish-clipboardguard.yml = .github\workflows\publish-clipboardguard.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -66,6 +71,7 @@ Global
 		{267DA4AD-999A-4C73-8A9C-EDFFA1554EE9} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
 		{BF209C8A-F988-4603-B8DC-55559348867B} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
 		{8D929260-E433-4082-90CB-8440795E835D} = {3465C007-B533-4CC3-9C41-AE6C2D11A591}
+		{80E0C5AD-417B-4D4A-BA76-F73E03BAD35B} = {8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8BF95CD5-945E-4E2C-B60A-3A51F30C04AF}

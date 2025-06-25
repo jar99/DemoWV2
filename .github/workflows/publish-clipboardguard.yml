@@ -28,11 +28,11 @@ jobs:
 
     - name: Publish ClipboardGuardApp
       run: |
-        dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj \
-          --configuration Release \
-          --runtime win-x64 \
-          --self-contained true \
-          --output publish \
+        dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
+          --configuration Release `
+          --runtime win-x64 `
+          --self-contained true `
+          --output publish `
           /p:UseAppHost=true # Ensure a single .exe is created
 
     - name: Archive published artifact
