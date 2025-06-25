@@ -4,55 +4,98 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'App version (e.g., 1.0.0)'
+        description: 'App version (e.g., 1.0.0 for 1.0.0.X)'
         required: true
+      release_type:
+        description: 'Type of release'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+          - beta
+          - alpha
+          - dev
+      configuration:
+        description: 'Build Configuration'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+          - Debug
+          - Release
 
 jobs:
   build_and_publish:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '9.0.x' # Or the specific .NET version your project uses
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Restore dependencies
+        run: dotnet restore ClipboardGuardApp/ClipboardGuardApp.csproj
 
-    - name: Restore dependencies
-      run: dotnet restore ClipboardGuardApp/ClipboardGuardApp.csproj
+      - name: Build ClipboardGuardApp
+        run: dotnet build ClipboardGuardApp/ClipboardGuardApp.csproj --configuration ${{ github.event.inputs.configuration }} --no-restore
 
-    - name: Build ClipboardGuardApp
-      run: dotnet build ClipboardGuardApp/ClipboardGuardApp.csproj --configuration Release --no-restore
+      - name: Publish ClipboardGuardApp
+        run: |
+          # Get current year for copyright
+          CURRENT_YEAR=$(date +%Y)
+          
+          # Construct AssemblyVersion and FileVersion (e.g., 1.0.0.123)
+          ASSEMBLY_FILE_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}"
 
-    - name: Publish ClipboardGuardApp
-      run: |
-        dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
-          --configuration Release `
+          # Construct Product/Package Version (SemVer-compliant, e.g., 1.0.0 or 1.0.0-beta.123)
+          PRODUCT_VERSION="${{ github.event.inputs.version }}"
+          if [ "${{ github.event.inputs.release_type }}" != "release" ]; then
+            PRODUCT_VERSION="${{ github.event.inputs.version }}-${{ github.event.inputs.release_type }}.${{ github.run_number }}"
+          fi
+
+          # Construct AssemblyInformationalVersion (detailed human-readable, e.g., 1.0.0.123-prerelease-Debug)
+          INFORMATIONAL_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
+
+          dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
+          --configuration ${{ github.event.inputs.configuration }} `
           --runtime win-x64 `
           --self-contained true `
           --output publish `
-          /p:UseAppHost=true # Ensure a single .exe is created
+          /p:UseAppHost=true `
+          /p:AssemblyVersion="${ASSEMBLY_FILE_VERSION}" `
+          /p:FileVersion="${ASSEMBLY_FILE_VERSION}" `
+          /p:Version="${PRODUCT_VERSION}" `
+          /p:AssemblyInformationalVersion="${INFORMATIONAL_VERSION}" `
+          /p:Company="${{ github.repository_owner }}" `
+          /p:Product="${{ github.repository }}" `
+          /p:Copyright="Copyright © ${CURRENT_YEAR} ${{ github.repository_owner }}. All rights reserved. Licensed under MIT."
+          /p:SourceRevisionId="${{ github.sha }}" ` 
+          /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" `
+          
+      - name: Archive published artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClipboardGuardApp-Windows-x64-${{ github.event.inputs.configuration }}
+          path: publish/
 
-    - name: Archive published artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ClipboardGuardApp-Windows-x64
-        path: publish/
-
-    - name: Create GitHub Release
-      if: github.event_name == 'workflow_dispatch'
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ github.event.inputs.version }}
-        name: ClipboardGuardApp Release v${{ github.event.inputs.version }}
-        body: |
-          ClipboardGuardApp v${{ github.event.inputs.version }}
-          A self-contained executable for Windows (x64).
-        draft: false
-        prerelease: false
-        files: publish/*
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: ClipboardGuardApp Release v${{ github.event.inputs.version }} (Build ${{ github.run_number }})
+          body: |
+            ClipboardGuardApp v${{ github.event.inputs.version }} (Build ${{ github.run_number }})
+            Configuration: ${{ github.event.inputs.configuration }}
+            A self-contained executable for Windows (x64).
+          draft: false
+          prerelease: ${{ github.event.inputs.release_type == 'prerelease' || github.event.inputs.release_type == 'beta' || github.event.inputs.release_type == 'alpha' || github.event.inputs.release_type == 'dev' }}
+          files: publish/*

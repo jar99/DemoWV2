@@ -6,6 +6,19 @@
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
+        <!-- Application Info -->
+        <ApplicationIcon>appicon.ico</ApplicationIcon>
+        <Company Condition="'$(Company)' == ''">Jan Reihl</Company>
+        <Product Condition="'$(Product)' == ''">ClipboardGuardApp</Product>
+        <Copyright Condition="'$(Copyright)' == ''">Copyright © 2025 Jan Reihl. All rights reserved. Licensed under MIT.</Copyright>
+
+        <!-- Versioning properties (can be overridden by CI/CD) -->
+        <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.0.0.0</AssemblyVersion>
+        <FileVersion Condition="'$(FileVersion)' == ''">1.0.0.0</FileVersion>
+        <Version Condition="'$(Version)' == ''">1.0.0</Version>
+        <AssemblyInformationalVersion Condition="'$(AssemblyInformationalVersion)' == ''">1.0.0-beta</AssemblyInformationalVersion>
+        <SourceRevisionId Condition="'$(SourceRevisionId)' == ''"/>
+        <RepositoryUrl Condition="'$(RepositoryUrl)' == ''"/>
     </PropertyGroup>
 
 </Project>
