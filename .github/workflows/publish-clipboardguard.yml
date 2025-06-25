@@ -47,10 +47,10 @@ jobs:
       - name: Publish ClipboardGuardApp
         run: |
           # Get current year for copyright
-          CURRENT_YEAR=$(date +%Y)
+          $CURRENT_YEAR = (Get-Date).Year
           
           # Construct AssemblyVersion and FileVersion (e.g., 1.0.0.123)
-          ASSEMBLY_FILE_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}"
+          $ASSEMBLY_FILE_VERSION = "${{ github.event.inputs.version }}.${{ github.run_number }}"
           
           # Construct Product/Package Version (SemVer-compliant, e.g., 1.0.0 or 1.0.0-beta.123)
           $PRODUCT_VERSION = "${{ github.event.inputs.version }}"
@@ -59,7 +59,7 @@ jobs:
           }
           
           # Construct AssemblyInformationalVersion (detailed human-readable, e.g., 1.0.0.123-prerelease-Debug)
-          INFORMATIONAL_VERSION="${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
+          $INFORMATIONAL_VERSION = "${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
 
           dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
           --configuration ${{ github.event.inputs.configuration }} `
@@ -73,9 +73,9 @@ jobs:
           /p:AssemblyInformationalVersion="${INFORMATIONAL_VERSION}" `
           /p:Company="${{ github.repository_owner }}" `
           /p:Product="${{ github.repository }}" `
-          /p:Copyright="Copyright © ${CURRENT_YEAR} ${{ github.repository_owner }}. All rights reserved. Licensed under MIT."
+          /p:Copyright="Copyright © ${CURRENT_YEAR} ${{ github.repository_owner }}. All rights reserved. Licensed under MIT." `
           /p:SourceRevisionId="${{ github.sha }}" ` 
-          /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" `
+          /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}"
 
       - name: Archive published artifact
         uses: actions/upload-artifact@v4
@@ -111,3 +111,4 @@ jobs:
           prerelease: ${{ github.event.inputs.release_type == 'prerelease' || github.event.inputs.release_type == 'beta' || github.event.inputs.release_type == 'alpha' || github.event.inputs.release_type == 'dev' }}
           generate_release_notes: true
           files: publish/*
+
