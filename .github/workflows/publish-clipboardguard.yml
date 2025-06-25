@@ -76,7 +76,7 @@ jobs:
           /p:Copyright="Copyright © ${CURRENT_YEAR} ${{ github.repository_owner }}. All rights reserved. Licensed under MIT."
           /p:SourceRevisionId="${{ github.sha }}" ` 
           /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" `
-          
+
       - name: Archive published artifact
         uses: actions/upload-artifact@v4
         with:
@@ -93,9 +93,21 @@ jobs:
           tag_name: v${{ github.event.inputs.version }}
           name: ClipboardGuardApp Release v${{ github.event.inputs.version }} (Build ${{ github.run_number }})
           body: |
-            ClipboardGuardApp v${{ github.event.inputs.version }} (Build ${{ github.run_number }})
-            Configuration: ${{ github.event.inputs.configuration }}
+            ## Release Details
+            - **Version:** ${{ github.event.inputs.version }}
+            - **Build Number:** ${{ github.run_number }}
+            - **Release Type:** ${{ github.event.inputs.release_type }}
+            - **Configuration:** ${{ github.event.inputs.configuration }}
+            - **Informational Version:** ${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}
+            - **Commit SHA:** ${{ github.sha }}
+            - **Repository:** ${{ github.server_url }}/${{ github.repository }}
+
             A self-contained executable for Windows (x64).
+
+            ---
+
+            *(Generated release notes will appear below)*
           draft: false
           prerelease: ${{ github.event.inputs.release_type == 'prerelease' || github.event.inputs.release_type == 'beta' || github.event.inputs.release_type == 'alpha' || github.event.inputs.release_type == 'dev' }}
+          generate_release_notes: true
           files: publish/*
