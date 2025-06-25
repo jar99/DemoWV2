@@ -7,7 +7,7 @@
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
         <!-- Application Info -->
-        <ApplicationIcon>appicon.ico</ApplicationIcon>
+        <ApplicationIcon Condition="Exists('appicon.ico')">appicon.ico</ApplicationIcon>
         <Company Condition="'$(Company)' == ''">Jan Reihl</Company>
         <Product Condition="'$(Product)' == ''">ClipboardGuardApp</Product>
         <Copyright Condition="'$(Copyright)' == ''">Copyright © 2025 Jan Reihl. All rights reserved. Licensed under MIT.</Copyright>
