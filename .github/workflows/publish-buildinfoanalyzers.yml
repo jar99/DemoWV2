@@ -36,27 +36,7 @@ jobs:
 
   test:
     needs: build
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore dependencies
-        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-output
-          path: BuildInfoAnalyzers/bin/Release
-
-      - name: Test
-        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-build --logger trx
+    uses: ./.github/workflows/test-buildinfoanalyzers.yml
 
   pack-publish:
     needs: test
