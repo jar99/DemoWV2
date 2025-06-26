@@ -53,7 +53,7 @@ jobs:
         run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-build --logger trx
+        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --verbosity normal --no-build --logger trx --collect: "XPlat Code Coverage"
 
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -77,7 +77,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-          source-url: https://nuget.pkg.github.com/jar99/index.json
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner}}/index.json
         env:
           NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
@@ -112,6 +112,4 @@ jobs:
           path: ./nupkg
 
       - name: Publish to GitHub Packages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dotnet nuget push ./nupkg/*.nupkg --skip-duplicate --no-symbols true
+        run: dotnet nuget push ./BuildInfoAnalyzers/nupkg/*.nupkg --skip-duplicate --no-symbols true
