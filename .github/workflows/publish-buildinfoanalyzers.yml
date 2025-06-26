@@ -36,7 +36,31 @@ jobs:
 
   test:
     needs: build
-    uses: ./.github/workflows/test-buildinfoanalyzers.yml
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+
+      - name: Build
+        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-build --logger trx
+
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: BuildInfoAnalyzers.Tests/TestResults/*.trx
 
   pack-publish:
     needs: test
