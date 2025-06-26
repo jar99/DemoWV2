@@ -64,15 +64,17 @@ jobs:
           # Construct AssemblyInformationalVersion (detailed human-readable, e.g., 1.0.0.123-prerelease-Debug)
           $INFORMATIONAL_VERSION = "${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
 
+          #
+          # /p:PublishTrimmed=true `
+
           dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
           --configuration ${{ github.event.inputs.configuration }} `
           --runtime win-x64 `
           --self-contained true `
           --output publish `
           /p:UseAppHost=true `
-          /p:PublishTrimmed=true `
-          # /p:PublishSingleFile=true `
-          # /p:IncludeAllContentForSelfExtract=true `
+          /p:PublishSingleFile=true `
+          /p:IncludeAllContentForSelfExtract=true `
           /p:AssemblyVersion="${ASSEMBLY_FILE_VERSION}" `
           /p:FileVersion="${ASSEMBLY_FILE_VERSION}" `
           /p:Version="${PRODUCT_VERSION}" `
