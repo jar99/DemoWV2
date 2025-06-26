@@ -1,4 +1,4 @@
-name: Build and Test BuildInfoAnalyzers
+name: Test BuildInfoAnalyzers
 
 on:
   push:

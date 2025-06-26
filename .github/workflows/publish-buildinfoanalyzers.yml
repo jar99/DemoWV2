@@ -1,18 +1,18 @@
-name: Publish BuildInfoAnalyzers
+name: CI Build and Publish BuildInfoAnalyzers
 
 on:
-  workflow_run:
-    workflows: ["Build and Test BuildInfoAnalyzers"]
-    types:
-      - completed
-    branches: [ main, master ]
-    # Only run if the test workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
   workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type (e.g., release, beta, alpha, dev)'
+        required: false
+        default: 'release'
 
 jobs:
-  publish:
+  build:
     runs-on: windows-latest
+    env:
+      RELEASE_TYPE: ${{ github.event.inputs.release_type }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,17 +28,90 @@ jobs:
       - name: Build
         run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: BuildInfoAnalyzers/bin/Release
+
+  test:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: BuildInfoAnalyzers/bin/Release
+
+      - name: Test
+        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-build --logger trx
+
+  pack-publish:
+    needs: test
+    runs-on: windows-latest
+    outputs:
+      package_version: ${{ steps.get_version.outputs.package_version }}
+    env:
+      RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: BuildInfoAnalyzers/bin/Release
+
+      - name: Read package version from .csproj, append git hash and release type
+        id: get_version
+        run: |
+          [xml]$proj = Get-Content BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+          $baseVersion = $proj.Project.PropertyGroup | Where-Object { $_.PackageVersion } | Select-Object -ExpandProperty PackageVersion -First 1
+          if (-not $baseVersion) { $baseVersion = "0.0.1" }
+          $releaseType = if ($env:RELEASE_TYPE) { $env:RELEASE_TYPE } else { "release" }
+          $gitHash = (git rev-parse --short HEAD).Trim()
+          $version = "$baseVersion-$releaseType-$gitHash"
+          echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "::set-output name=package_version::$version"
+
       - name: Pack NuGet package
-        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg
+        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Upload nupkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: ./nupkg
 
       - name: Publish to NuGet.org
-        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.NUGET_API_KEY != ''
+        if: secrets.NUGET_API_KEY != ''
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: dotnet nuget push ./nupkg/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Publish to GitHub Packages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && secrets.GITHUB_TOKEN != ''
+        if: secrets.GITHUB_TOKEN != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: dotnet nuget push ./nupkg/*.nupkg --api-key $GITHUB_TOKEN --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
