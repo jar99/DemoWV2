@@ -72,6 +72,14 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
         run: dotnet restore BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj
 
@@ -119,7 +127,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build-output
-          path: BuildInfoAnalyzers/bin/Release
+          path: BuildInfoAnalyzers
 
       - name: Read package version from .csproj, append git hash and release type
         id: get_version
