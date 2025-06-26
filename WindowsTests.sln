@@ -31,6 +31,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Workflows", "Workflows", "{
 		.github\workflows\publish-clipboardguard.yml = .github\workflows\publish-clipboardguard.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildInfoAnalyzers", "BuildInfoAnalyzers\BuildInfoAnalyzers.csproj", "{67B8B065-3E27-40B5-9BF5-7F0FCA9EF4F5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildInfoAnalyzers.Tests", "BuildInfoAnalyzers.Tests\BuildInfoAnalyzers.Tests.csproj", "{AFB6B075-CA67-4CCC-97D4-D6ACD72A74B9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +65,14 @@ Global
 		{8D929260-E433-4082-90CB-8440795E835D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D929260-E433-4082-90CB-8440795E835D}.Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{8D929260-E433-4082-90CB-8440795E835D}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{67B8B065-3E27-40B5-9BF5-7F0FCA9EF4F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67B8B065-3E27-40B5-9BF5-7F0FCA9EF4F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67B8B065-3E27-40B5-9BF5-7F0FCA9EF4F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67B8B065-3E27-40B5-9BF5-7F0FCA9EF4F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFB6B075-CA67-4CCC-97D4-D6ACD72A74B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFB6B075-CA67-4CCC-97D4-D6ACD72A74B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFB6B075-CA67-4CCC-97D4-D6ACD72A74B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFB6B075-CA67-4CCC-97D4-D6ACD72A74B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

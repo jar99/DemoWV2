@@ -1,0 +1,44 @@
+name: Publish BuildInfoAnalyzers
+
+on:
+  workflow_run:
+    workflows: ["Build and Test BuildInfoAnalyzers"]
+    types:
+      - completed
+    branches: [ main, master ]
+    # Only run if the test workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+
+      - name: Build
+        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore
+
+      - name: Pack NuGet package
+        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg
+
+      - name: Publish to NuGet.org
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.NUGET_API_KEY != ''
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Publish to GitHub Packages
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && secrets.GITHUB_TOKEN != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key $GITHUB_TOKEN --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate

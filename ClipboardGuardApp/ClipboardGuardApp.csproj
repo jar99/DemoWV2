@@ -6,6 +6,9 @@
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <!-- Application Info -->
         <ApplicationIcon Condition="Exists('appicon.ico')">appicon.ico</ApplicationIcon>
         <Company Condition="'$(Company)' == ''">Jan Reihl</Company>
@@ -17,8 +20,23 @@
         <FileVersion Condition="'$(FileVersion)' == ''">1.0.0.0</FileVersion>
         <Version Condition="'$(Version)' == ''">1.0.0</Version>
         <AssemblyInformationalVersion Condition="'$(AssemblyInformationalVersion)' == ''">1.0.0-beta</AssemblyInformationalVersion>
-        <SourceRevisionId Condition="'$(SourceRevisionId)' == ''"/>
-        <RepositoryUrl Condition="'$(RepositoryUrl)' == ''"/>
-    </PropertyGroup>
 
+        <SourceRevisionId Condition="'$(SourceRevisionId)' == ''"/>
+        <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/jar99/DemoWV2</RepositoryUrl>
+
+        <ReleaseType Condition="'$(ReleaseType)' == ''">dev</ReleaseType>
+        <DefineConstants Condition="'$(ReleaseType)' != 'release'">$(DefineConstants);APP_SHOW_RELEASE_TYPE_INFO</DefineConstants>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <CompilerVisibleProperty Include="RepositoryUrl"/>
+        <CompilerVisibleProperty Include="Version"/>
+        <CompilerVisibleProperty Include="ReleaseType"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\BuildInfoAnalyzers\BuildInfoAnalyzers.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false"/>
+    </ItemGroup>
 </Project>

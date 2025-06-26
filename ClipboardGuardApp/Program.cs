@@ -183,7 +183,12 @@ namespace ClipboardGuardApp
             _clearClipboard = clearClipboard;
 
             // --- Form Initialization ---
+#if (APP_SHOW_RELEASE_TYPE_INFO)
+            base.Text = $"Clipboard Guard - {BuildInfo.ReleaseType}";
+#else
             base.Text = "Clipboard Guard";
+#endif
+
             Size = new Size(450, 400);
             StartPosition = FormStartPosition.CenterScreen;
             base.BackColor = Color.FromArgb(240, 240, 240);
