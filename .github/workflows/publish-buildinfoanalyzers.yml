@@ -7,6 +7,21 @@ on:
         description: 'Release type (e.g., release, beta, alpha, dev)'
         required: false
         default: 'release'
+      skip_tests:
+        description: 'Skip running tests?'
+        required: false
+        default: false
+        type: boolean
+      warn_as_error:
+        description: 'Treat warnings as errors?'
+        required: false
+        default: false
+        type: boolean
+      verbosity:
+        description: 'Verbosity level for dotnet commands (quiet, minimal, normal, detailed, diagnostic)'
+        required: false
+        default: 'minimal'
+        type: string
 
 jobs:
   build:
@@ -14,6 +29,14 @@ jobs:
     env:
       RELEASE_TYPE: ${{ github.event.inputs.release_type }}
     steps:
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -22,11 +45,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Check code formatting
+        run: dotnet format --verify-no-changes --verbosity ${{ github.event.inputs.verbosity }}
+
+      - name: Run static code analysis
+        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore /p:TreatWarningsAsErrors=true --nologo --verbosity ${{ github.event.inputs.verbosity }}
+
       - name: Restore dependencies
         run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
 
       - name: Build
-        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore
+        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore ${{ github.event.inputs.warn_as_error == 'true' && '--warnaserror' || '' }} --nologo --verbosity ${{ github.event.inputs.verbosity }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -36,6 +65,7 @@ jobs:
 
   test:
     needs: build
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -50,10 +80,10 @@ jobs:
         run: dotnet restore BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj
 
       - name: Build
-        run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
+        run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore ${{ github.event.inputs.warn_as_error == 'true' && '--warnaserror' || '' }} --nologo --verbosity ${{ github.event.inputs.verbosity }}
 
       - name: Test
-        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --verbosity normal --no-build --logger trx --collect "XPlat Code Coverage"
+        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --verbosity ${{ github.event.inputs.verbosity }} --no-build --logger trx --collect "XPlat Code Coverage" --blame
 
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -62,8 +92,16 @@ jobs:
           name: test-results
           path: BuildInfoAnalyzers.Tests/TestResults/*.trx
 
+      - name: Upload code coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: BuildInfoAnalyzers.Tests/TestResults/**/*.xml
+
   pack-publish:
-    needs: test
+    needs: [build, test]
+    if: ${{ github.event.inputs.skip_tests == 'true' || always() }}
     runs-on: windows-latest
     outputs:
       package_version: ${{ steps.get_version.outputs.package_version }}
@@ -100,10 +138,10 @@ jobs:
           $gitHash = (git rev-parse --short HEAD).Trim()
           $version = "$baseVersion-$releaseType-$gitHash"
           echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "::set-output name=package_version::$version"
+          echo "package_version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Pack NuGet package
-        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg /p:PackageVersion=${{ env.PACKAGE_VERSION }}
+        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg /p:PackageVersion=${{ env.PACKAGE_VERSION }} /p:ContinuousIntegrationBuild=true --nologo --verbosity ${{ github.event.inputs.verbosity }}
 
       - name: Upload nupkg artifact
         uses: actions/upload-artifact@v4
@@ -112,4 +150,12 @@ jobs:
           path: ./nupkg
 
       - name: Publish to GitHub Packages
-        run: dotnet nuget push ./nupkg/*.nupkg --skip-duplicate --no-symbols true
+        run: dotnet nuget push ${{ github.workspace }}/nupkg/*.nupkg --skip-duplicate --no-symbols true --timeout 300
+
+      - name: Tag branch with release version
+        if: ${{ github.ref_type == 'branch' }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git tag v${{ env.PACKAGE_VERSION }}
+          git push origin v${{ env.PACKAGE_VERSION }}
