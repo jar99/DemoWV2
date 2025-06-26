@@ -1,8 +1,5 @@
 name: Test Report for BuildInfoAnalyzers
 
-description: >
-  This workflow collects and publishes test results from the BuildInfoAnalyzers test runs as a summary and artifact.
-
 on:
   workflow_run:
     workflows:
