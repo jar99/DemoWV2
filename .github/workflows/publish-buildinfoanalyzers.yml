@@ -143,8 +143,11 @@ jobs:
           name: nupkg
           path: ./nupkg
 
+      - name: List files in nupkg directory
+        run: dir ./nupkg
+
       - name: Publish to GitHub Packages
-        run: dotnet nuget push ${{ github.workspace }}/nupkg/*.nupkg --skip-duplicate --no-symbols true --timeout 300
+        run: dotnet nuget push ./nupkg/*.nupkg --skip-duplicate --no-symbols true --timeout 300
 
       - name: Tag branch with release version
         if: ${{ github.ref_type == 'branch' }}
