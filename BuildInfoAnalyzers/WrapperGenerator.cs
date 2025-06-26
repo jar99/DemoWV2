@@ -1,12 +1,13 @@
 ﻿#nullable enable
 
+using System.Linq;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+
 
 namespace BuildInfoAnalyzers
 {
@@ -35,13 +36,16 @@ namespace BuildInfoAnalyzers
     }
 }
 ";
+
         private static readonly SymbolDisplayFormat FullyQualifiedWithoutGlobalFormat = new SymbolDisplayFormat(
             globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
             typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
             genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
             memberOptions: SymbolDisplayMemberOptions.IncludeExplicitInterface,
-            parameterOptions: SymbolDisplayParameterOptions.IncludeType | SymbolDisplayParameterOptions.IncludeName | SymbolDisplayParameterOptions.IncludeModifiers,
-            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes | SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
+            parameterOptions: SymbolDisplayParameterOptions.IncludeType | SymbolDisplayParameterOptions.IncludeName |
+                              SymbolDisplayParameterOptions.IncludeModifiers,
+            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.UseSpecialTypes |
+                                  SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
         );
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -64,22 +68,22 @@ namespace BuildInfoAnalyzers
         {
             var methodDeclarationSyntax = (MethodDeclarationSyntax)context.Node;
 
-            if (context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax) is IMethodSymbol methodSymbol)
+            if (context.SemanticModel.GetDeclaredSymbol(methodDeclarationSyntax) is not { } methodSymbol) return null;
+            if (!methodSymbol.GetAttributes().Any(a =>
+                    a.AttributeClass?.ToDisplayString() == "BuildInfoAnalyzers.WrapperAttribute")) return null;
+            // Check if the containing type is partial, supporting class, struct, and record.
+            foreach (var syntaxNode in methodSymbol.ContainingType.DeclaringSyntaxReferences.Select(syntaxRef =>
+                         syntaxRef.GetSyntax()))
             {
-                if (methodSymbol.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == "BuildInfoAnalyzers.WrapperAttribute"))
+                if ((syntaxNode is TypeDeclarationSyntax typeDecl &&
+                     typeDecl.Modifiers.Any(SyntaxKind.PartialKeyword)) ||
+                    (syntaxNode is RecordDeclarationSyntax recDecl &&
+                     recDecl.Modifiers.Any(SyntaxKind.PartialKeyword)))
                 {
-                    // Check if the containing type is partial, supporting class, struct, and record.
-                    foreach (var syntaxRef in methodSymbol.ContainingType.DeclaringSyntaxReferences)
-                    {
-                        var syntaxNode = syntaxRef.GetSyntax();
-                        if ((syntaxNode is TypeDeclarationSyntax typeDecl && typeDecl.Modifiers.Any(SyntaxKind.PartialKeyword)) ||
-                            (syntaxNode is RecordDeclarationSyntax recDecl && recDecl.Modifiers.Any(SyntaxKind.PartialKeyword)))
-                        {
-                            return methodSymbol;
-                        }
-                    }
+                    return methodSymbol;
                 }
             }
+
             return null;
         }
 
@@ -87,22 +91,28 @@ namespace BuildInfoAnalyzers
         {
             if (method.ContainingType is null) return;
 
-            var attributeData = method.GetAttributes().First(a => a.AttributeClass?.ToDisplayString() == "BuildInfoAnalyzers.WrapperAttribute");
+            var attributeData = method.GetAttributes().First(a =>
+                a.AttributeClass?.ToDisplayString() == "BuildInfoAnalyzers.WrapperAttribute");
 
             if (attributeData.ConstructorArguments.Length == 0) return;
             if (attributeData.ConstructorArguments[0].Value is not INamedTypeSymbol wrapperType) return;
 
             string? customImplementationMethodName = null;
-            if (attributeData.ConstructorArguments.Length > 1 && attributeData.ConstructorArguments[1].Value is string ctorValue)
+            if (attributeData.ConstructorArguments.Length > 1 &&
+                attributeData.ConstructorArguments[1].Value is string ctorValue)
                 customImplementationMethodName = ctorValue;
             else if (attributeData.NamedArguments.Any(kv => kv.Key == "ImplementationMethodName"))
-                customImplementationMethodName = attributeData.NamedArguments.First(kv => kv.Key == "ImplementationMethodName").Value.Value as string;
+                customImplementationMethodName =
+                    attributeData.NamedArguments.First(kv => kv.Key == "ImplementationMethodName").Value
+                        .Value as string;
 
             string source = GenerateWrapperMethod(method, wrapperType, customImplementationMethodName);
-            context.AddSource($"{method.ContainingType.Name}.{method.Name}.g.cs", SourceText.From(source, Encoding.UTF8));
+            context.AddSource($"{method.ContainingType.Name}.{method.Name}.g.cs",
+                SourceText.From(source, Encoding.UTF8));
         }
 
-        internal static string GenerateWrapperMethod(IMethodSymbol method, ITypeSymbol wrapperType, string? customImplementationMethodName)
+        private static string GenerateWrapperMethod(IMethodSymbol method, ITypeSymbol wrapperType,
+            string? customImplementationMethodName)
         {
             if (method.ContainingType == null)
                 return string.Empty;
@@ -113,10 +123,12 @@ namespace BuildInfoAnalyzers
                 ? customImplementationMethodName!
                 : $"{method.Name}_Implementation";
 
-            var methodParameters = method.Parameters.Select(p => p.ToDisplayString(FullyQualifiedWithoutGlobalFormat)).ToList();
+            var methodParameters = method.Parameters.Select(p => p.ToDisplayString(FullyQualifiedWithoutGlobalFormat))
+                .ToList();
             var callParameters = method.Parameters.Select(p =>
             {
-                var modifier = p.RefKind switch {
+                var modifier = p.RefKind switch
+                {
                     RefKind.Ref => "ref ",
                     RefKind.Out => "out ",
                     RefKind.In => "in ",
@@ -148,86 +160,84 @@ namespace BuildInfoAnalyzers
                 // Look for an implementation method with the same name + _Implementation and async modifier
                 foreach (var member in containingType.GetMembers())
                 {
-                    if (member is IMethodSymbol impl && impl.Name == implementationMethodName && impl.IsAsync)
-                    {
-                        isAsyncVoid = true;
-                        break;
-                    }
+                    if (member is not IMethodSymbol impl || impl.Name != implementationMethodName ||
+                        !impl.IsAsync) continue;
+                    isAsyncVoid = true;
+                    break;
                 }
             }
+
             string asyncKeyword = (isTaskReturnType || isAsyncVoid) ? "async " : "";
             string awaitKeyword = isTaskReturnType ? "await " : "";
 
-            string typeKind = containingType.TypeKind switch {
-                TypeKind.Struct => "struct",
-                _ => containingType.IsRecord ? "record" : "class"
-            };
-            string genericParams = containingType.IsGenericType ? $"<{string.Join(", ", containingType.TypeParameters.Select(p => p.Name))}>" : "";
-            string classNameWithGenerics = $"{containingType.Name}{genericParams}";
-            string classStaticKeyword = containingType.IsStatic ? "static " : "";
             string methodStaticKeyword = method.IsStatic ? "static " : "";
 
             // Robust: Check all partial declarations for explicit accessibility and ensure they match
             var explicitAccessibilities = new HashSet<Accessibility>();
-            foreach (var syntaxRef in method.DeclaringSyntaxReferences)
+            foreach (var node in method.DeclaringSyntaxReferences.Select(syntaxRef => syntaxRef.GetSyntax()))
             {
-                var node = syntaxRef.GetSyntax();
-                if (node is MethodDeclarationSyntax mds)
-                {
-                    var mods = mds.Modifiers;
-                    if (mods.Any(mod =>
+                if (node is not MethodDeclarationSyntax mds) continue;
+                var mods = mds.Modifiers;
+                if (!mods.Any(mod =>
                         mod.IsKind(SyntaxKind.PublicKeyword) ||
                         mod.IsKind(SyntaxKind.PrivateKeyword) ||
                         mod.IsKind(SyntaxKind.ProtectedKeyword) ||
-                        mod.IsKind(SyntaxKind.InternalKeyword)))
-                    {
-                        // Determine the accessibility for this declaration
-                        if (mods.Any(SyntaxKind.PublicKeyword))
-                            explicitAccessibilities.Add(Accessibility.Public);
-                        else if (mods.Any(SyntaxKind.ProtectedKeyword) && mods.Any(SyntaxKind.InternalKeyword) && !mods.Any(SyntaxKind.PrivateKeyword))
-                            explicitAccessibilities.Add(Accessibility.ProtectedOrInternal); // protected internal
-                        else if (mods.Any(SyntaxKind.PrivateKeyword) && mods.Any(SyntaxKind.ProtectedKeyword) && !mods.Any(SyntaxKind.InternalKeyword))
-                            explicitAccessibilities.Add(Accessibility.ProtectedAndInternal); // private protected
-                        else if (mods.Any(SyntaxKind.InternalKeyword))
-                            explicitAccessibilities.Add(Accessibility.Internal);
-                        else if (mods.Any(SyntaxKind.ProtectedKeyword))
-                            explicitAccessibilities.Add(Accessibility.Protected);
-                        else if (mods.Any(SyntaxKind.PrivateKeyword))
-                            explicitAccessibilities.Add(Accessibility.Private);
-                    }
-                }
+                        mod.IsKind(SyntaxKind.InternalKeyword))) continue;
+                // Determine the accessibility for this declaration
+                if (mods.Any(SyntaxKind.PublicKeyword))
+                    explicitAccessibilities.Add(Accessibility.Public);
+                else if (mods.Any(SyntaxKind.ProtectedKeyword) && mods.Any(SyntaxKind.InternalKeyword) &&
+                         !mods.Any(SyntaxKind.PrivateKeyword))
+                    explicitAccessibilities.Add(Accessibility.ProtectedOrInternal); // protected internal
+                else if (mods.Any(SyntaxKind.PrivateKeyword) && mods.Any(SyntaxKind.ProtectedKeyword) &&
+                         !mods.Any(SyntaxKind.InternalKeyword))
+                    explicitAccessibilities.Add(Accessibility.ProtectedAndInternal); // private protected
+                else if (mods.Any(SyntaxKind.InternalKeyword))
+                    explicitAccessibilities.Add(Accessibility.Internal);
+                else if (mods.Any(SyntaxKind.ProtectedKeyword))
+                    explicitAccessibilities.Add(Accessibility.Protected);
+                else if (mods.Any(SyntaxKind.PrivateKeyword))
+                    explicitAccessibilities.Add(Accessibility.Private);
             }
+
             string accessModifier = string.Empty;
-            if (explicitAccessibilities.Count == 1)
+            switch (explicitAccessibilities.Count)
             {
-                var acc = explicitAccessibilities.First();
-                accessModifier = acc switch
+                case 1:
                 {
-                    Accessibility.Private => "private ",
-                    Accessibility.Protected => "protected ",
-                    Accessibility.Internal => "internal ",
-                    Accessibility.ProtectedOrInternal => "protected internal ",
-                    Accessibility.ProtectedAndInternal => "private protected ",
-                    _ => "public "
-                };
+                    var acc = explicitAccessibilities.First();
+                    accessModifier = acc switch
+                    {
+                        Accessibility.Private => "private ",
+                        Accessibility.Protected => "protected ",
+                        Accessibility.Internal => "internal ",
+                        Accessibility.ProtectedOrInternal => "protected internal ",
+                        Accessibility.ProtectedAndInternal => "private protected ",
+                        _ => "public "
+                    };
+                    break;
+                }
+                case > 1:
+                    // Conflict: do not generate code, or generate a compile error
+                    return
+                        $"// <auto-generated/>\n#error Conflicting accessibility modifiers in partial method declarations for {method.Name}\n";
             }
-            else if (explicitAccessibilities.Count > 1)
-            {
-                // Conflict: do not generate code, or generate a compile error
-                return $"// <auto-generated/>\n#error Conflicting accessibility modifiers in partial method declarations for {method.Name}\n";
-            }
+
             // For struct methods with non-void return types, always emit 'private'
             if (containingType.TypeKind == TypeKind.Struct && !method.ReturnsVoid)
             {
                 accessModifier = "private ";
             }
+
             // For methods with no explicit accessibility, emit no modifier (C# default is private for partial methods)
             if (string.IsNullOrWhiteSpace(accessModifier))
             {
                 accessModifier = "";
             }
 
-            string genericMethodParams = method.IsGenericMethod ? $"<{string.Join(", ", method.TypeParameters.Select(p => p.Name))}>" : "";
+            string genericMethodParams = method.IsGenericMethod
+                ? $"<{string.Join(", ", method.TypeParameters.Select(p => p.Name))}>"
+                : "";
 
             var wrapperMembers = wrapperType.GetMembers();
 
@@ -282,42 +292,39 @@ namespace BuildInfoAnalyzers
             }
 
             int nesting = 0;
-            // Collect generic constraints for all containing types (outermost to innermost)
-            var allTypeConstraints = new List<string>();
             foreach (var typeSym in typeChain)
             {
-                string nestedTypeHeader = null;
+                string? nestedTypeHeader = null;
                 List<string> typeConstraints = new List<string>();
-                foreach (var syntaxRef in typeSym.DeclaringSyntaxReferences)
+                foreach (var node in typeSym.DeclaringSyntaxReferences.Select(syntaxRef => syntaxRef.GetSyntax()))
                 {
-                    var node = syntaxRef.GetSyntax();
-                    if (node is TypeDeclarationSyntax tds)
+                    if (node is not TypeDeclarationSyntax tds) continue;
+                    // Build the type header: modifiers, keyword, name, generics (no attributes, no namespace, no trivia)
+                    var headerBuilder = new StringBuilder();
+                    if (tds.Modifiers.Count > 0)
                     {
-                        // Build the type header: modifiers, keyword, name, generics (no attributes, no namespace, no trivia)
-                        var headerBuilder = new StringBuilder();
-                        if (tds.Modifiers.Count > 0)
-                        {
-                            headerBuilder.Append(string.Join(" ", tds.Modifiers.Select(m => m.Text)));
-                            headerBuilder.Append(' ');
-                        }
-                        headerBuilder.Append(tds.Keyword.Text);
+                        headerBuilder.Append(string.Join(" ", tds.Modifiers.Select(m => m.Text)));
                         headerBuilder.Append(' ');
-                        headerBuilder.Append(tds.Identifier.Text);
-                        if (tds.TypeParameterList != null)
-                            headerBuilder.Append(tds.TypeParameterList.ToFullString().Trim());
-                        nestedTypeHeader = headerBuilder.ToString().TrimEnd();
-                        // Collect constraints for this type from syntax (to preserve user formatting/order)
-                        if (tds.ConstraintClauses.Count > 0)
-                        {
-                            foreach (var clause in tds.ConstraintClauses)
-                            {
-                                var norm = string.Join(" ", clause.ToFullString().Split(new[] {'\r','\n'}, System.StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
-                                typeConstraints.Add(norm);
-                            }
-                        }
-                        break;
                     }
+
+                    headerBuilder.Append(tds.Keyword.Text);
+                    headerBuilder.Append(' ');
+                    headerBuilder.Append(tds.Identifier.Text);
+                    if (tds.TypeParameterList != null)
+                        headerBuilder.Append(tds.TypeParameterList.ToFullString().Trim());
+                    nestedTypeHeader = headerBuilder.ToString().TrimEnd();
+                    // Collect constraints for this type from syntax (to preserve user formatting/order)
+                    if (tds.ConstraintClauses.Count > 0)
+                    {
+                        typeConstraints.AddRange(tds.ConstraintClauses.Select(clause => string.Join(" ",
+                            clause.ToFullString()
+                                .Split(['\r', '\n'], System.StringSplitOptions.RemoveEmptyEntries)
+                                .Select(s => s.Trim()))));
+                    }
+
+                    break;
                 }
+
                 if (nestedTypeHeader == null)
                 {
                     // Fallback: synthesize header
@@ -326,9 +333,12 @@ namespace BuildInfoAnalyzers
                         TypeKind.Struct => "struct",
                         _ => typeSym.IsRecord ? "record" : "class"
                     };
-                    string nestedGenericParams = typeSym.IsGenericType ? $"<{string.Join(", ", typeSym.TypeParameters.Select(p => p.Name))}>" : "";
+                    string nestedGenericParams = typeSym.IsGenericType
+                        ? $"<{string.Join(", ", typeSym.TypeParameters.Select(p => p.Name))}>"
+                        : "";
                     string nestedClassStaticKeyword = typeSym.IsStatic ? "static " : "";
-                    nestedTypeHeader = $"{nestedClassStaticKeyword}partial {nestedTypeKind} {typeSym.Name}{nestedGenericParams}";
+                    nestedTypeHeader =
+                        $"{nestedClassStaticKeyword}partial {nestedTypeKind} {typeSym.Name}{nestedGenericParams}";
                     // Fallback: emit constraints from symbol (may not preserve formatting)
                     if (typeSym.IsGenericType)
                     {
@@ -338,12 +348,12 @@ namespace BuildInfoAnalyzers
                             if (typeParam.HasReferenceTypeConstraint) constraints.Add("class");
                             if (typeParam.HasUnmanagedTypeConstraint) constraints.Add("unmanaged");
                             if (typeParam.HasNotNullConstraint) constraints.Add("notnull");
-                            if (typeParam.HasValueTypeConstraint && !typeParam.IsValueType) constraints.Add("struct");
-                            foreach (var ct in typeParam.ConstraintTypes)
-                            {
-                                constraints.Add(ct.ToDisplayString(FullyQualifiedWithoutGlobalFormat));
-                            }
-                            if (typeParam.HasConstructorConstraint && !typeParam.HasValueTypeConstraint)
+                            if (typeParam is { HasValueTypeConstraint: true, IsValueType: false })
+                                constraints.Add("struct");
+                            constraints.AddRange(typeParam.ConstraintTypes.Select(ct =>
+                                ct.ToDisplayString(FullyQualifiedWithoutGlobalFormat)));
+
+                            if (typeParam is { HasConstructorConstraint: true, HasValueTypeConstraint: false })
                                 constraints.Add("new()");
                             if (constraints.Count > 0)
                             {
@@ -352,6 +362,7 @@ namespace BuildInfoAnalyzers
                         }
                     }
                 }
+
                 sourceBuilder.AppendLine($"{new string(' ', 4 * nesting)}{nestedTypeHeader}");
                 foreach (var clause in typeConstraints)
                     sourceBuilder.AppendLine($"{new string(' ', 4 * nesting)}{clause}");
@@ -363,22 +374,21 @@ namespace BuildInfoAnalyzers
             // Only emit the method's own constraints on the method, not the containing type's constraints
             // Emit constraints in the same order and wording as the user's declaration
             var methodWhereClauses = new List<string>();
-            foreach (var syntaxRef in method.DeclaringSyntaxReferences)
+            foreach (var node in method.DeclaringSyntaxReferences.Select(syntaxRef => syntaxRef.GetSyntax()))
             {
-                var node = syntaxRef.GetSyntax();
-                if (node is MethodDeclarationSyntax mds && mds.ConstraintClauses.Count > 0)
-                {
-                    foreach (var clause in mds.ConstraintClauses)
-                    {
-                        // Normalize whitespace for the clause
-                        var norm = string.Join(" ", clause.ToFullString().Split(new[] {'\r','\n'}, System.StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
-                        methodWhereClauses.Add(norm);
-                    }
-                }
+                if (node is not MethodDeclarationSyntax { ConstraintClauses.Count: > 0 } mds) continue;
+                methodWhereClauses.AddRange(mds.ConstraintClauses.Select(clause => string.Join(" ",
+                    clause.ToFullString()
+                        .Split(['\r', '\n'], System.StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim()))));
             }
-            string genericConstraints = methodWhereClauses.Count > 0 ? (" " + string.Join(" ", methodWhereClauses)) : "";
 
-            var methodSignature = $"{accessModifier}{methodStaticKeyword}{asyncKeyword}partial {returnType} {method.Name}{genericMethodParams}({string.Join(", ", methodParameters)}){genericConstraints}".Replace("  ", " ").TrimEnd();
+            string genericConstraints =
+                methodWhereClauses.Count > 0 ? (" " + string.Join(" ", methodWhereClauses)) : "";
+
+            var methodSignature =
+                $"{accessModifier}{methodStaticKeyword}{asyncKeyword}partial {returnType} {method.Name}{genericMethodParams}({string.Join(", ", methodParameters)}){genericConstraints}"
+                    .Replace("  ", " ").TrimEnd();
             sourceBuilder.AppendLine($"{new string(' ', 4 * nesting)}{methodSignature}");
             sourceBuilder.AppendLine($"{new string(' ', 4 * nesting)}{{");
             string innerIndent = new string(' ', 4 * (nesting + 1));
@@ -390,13 +400,15 @@ namespace BuildInfoAnalyzers
             {
                 sourceBuilder.AppendLine($"{innerIndent}{wrapperTypeName}.OnEnter(\"{method.Name}\");");
             }
+
             sourceBuilder.AppendLine($"{innerIndent}var stopwatch = System.Diagnostics.Stopwatch.StartNew();");
             sourceBuilder.AppendLine($"{innerIndent}object? __wrapper_log_result = null;");
             sourceBuilder.AppendLine($"{innerIndent}try");
             sourceBuilder.AppendLine($"{innerIndent}{{");
             if (method.ReturnsVoid)
             {
-                sourceBuilder.AppendLine($"{innerIndent}    {implementationMethodName}({string.Join(", ", callParameters)});");
+                sourceBuilder.AppendLine(
+                    $"{innerIndent}    {implementationMethodName}({string.Join(", ", callParameters)});");
                 var outParams = method.Parameters.Where(p => p.RefKind == RefKind.Out).ToList();
                 if (outParams.Count == 1)
                 {
@@ -405,25 +417,32 @@ namespace BuildInfoAnalyzers
             }
             else if (isTaskReturnType && !isGenericTask) // Handles non-generic Task
             {
-                sourceBuilder.AppendLine($"{innerIndent}    await {implementationMethodName}({string.Join(", ", callParameters)});");
+                sourceBuilder.AppendLine(
+                    $"{innerIndent}    await {implementationMethodName}({string.Join(", ", callParameters)});");
             }
             else // Handles sync T and async Task<T>
             {
-                sourceBuilder.AppendLine($"{innerIndent}    var methodResult = {awaitKeyword}{implementationMethodName}({string.Join(", ", callParameters)});");
+                sourceBuilder.AppendLine(
+                    $"{innerIndent}    var methodResult = {awaitKeyword}{implementationMethodName}({string.Join(", ", callParameters)});");
                 sourceBuilder.AppendLine($"{innerIndent}    __wrapper_log_result = methodResult;");
                 sourceBuilder.AppendLine($"{innerIndent}    return methodResult;");
             }
+
             sourceBuilder.AppendLine($"{innerIndent}}}");
             sourceBuilder.AppendLine($"{innerIndent}catch (System.Exception ex)");
             sourceBuilder.AppendLine($"{innerIndent}{{");
             sourceBuilder.AppendLine($"{innerIndent}    stopwatch.Stop();");
-            if (hasOnError) sourceBuilder.AppendLine($"{innerIndent}    {wrapperTypeName}.OnError(\"{method.Name}\", ex, stopwatch.ElapsedMilliseconds);");
+            if (hasOnError)
+                sourceBuilder.AppendLine(
+                    $"{innerIndent}    {wrapperTypeName}.OnError(\"{method.Name}\", ex, stopwatch.ElapsedMilliseconds);");
             sourceBuilder.AppendLine($"{innerIndent}    throw;");
             sourceBuilder.AppendLine($"{innerIndent}}}");
             sourceBuilder.AppendLine($"{innerIndent}finally");
             sourceBuilder.AppendLine($"{innerIndent}{{");
             sourceBuilder.AppendLine($"{innerIndent}    stopwatch.Stop();");
-            if (hasOnExit) sourceBuilder.AppendLine($"{innerIndent}    {wrapperTypeName}.OnExit(\"{method.Name}\", __wrapper_log_result, stopwatch.ElapsedMilliseconds);");
+            if (hasOnExit)
+                sourceBuilder.AppendLine(
+                    $"{innerIndent}    {wrapperTypeName}.OnExit(\"{method.Name}\", __wrapper_log_result, stopwatch.ElapsedMilliseconds);");
             sourceBuilder.AppendLine($"{innerIndent}}}");
             sourceBuilder.AppendLine($"{new string(' ', 4 * nesting)}}}");
 
@@ -432,6 +451,7 @@ namespace BuildInfoAnalyzers
             {
                 sourceBuilder.AppendLine($"{new string(' ', 4 * (nesting - i - 1))}}}");
             }
+
             if (!inGlobalNamespace)
             {
                 sourceBuilder.AppendLine("}");
@@ -441,4 +461,3 @@ namespace BuildInfoAnalyzers
         }
     }
 }
-

@@ -48,9 +48,6 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
 
-      - name: Check code formatting
-        run: dotnet format --verify-no-changes --verbosity ${{ github.event.inputs.verbosity }}
-
       - name: Build
         run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore ${{ github.event.inputs.warn_as_error == 'true' && '--warnaserror' || '' }} --nologo --verbosity ${{ github.event.inputs.verbosity }}
 

@@ -780,5 +780,42 @@ public partial class Outer
             Assert.That(ctx.Log[0], Does.Contain("Enter:Add:7, 8"));
             Assert.That(ctx.Log.Any(l => l.Contains("Exit:Add:15")));
         }
+
+        [Test]
+        public void Wrapper_StaticClass_WorksAndLogs()
+        {
+            var userCode = @"public static partial class MyStaticService
+{
+    [BuildInfoAnalyzers.Wrapper(typeof(TestWrapper))]
+    public static partial int Add(int a, int b);
+    private static int Add_Implementation(int a, int b) { return a + b; }
+}";
+            var ctx = CompileAndLoad(userCode);
+            var serviceType = ctx.Assembly.GetType("MyStaticService")!;
+            var addMethod = serviceType.GetMethod("Add")!;
+            var result = addMethod.Invoke(null, new object[] { 5, 6 });
+            Assert.That(result, Is.EqualTo(11));
+            Assert.That(ctx.Log[0], Does.Contain("Enter:Add:5, 6"));
+            Assert.That(ctx.Log.Any(l => l.Contains("Exit:Add:11")));
+        }
+
+        [Test]
+        public void Wrapper_GenericClass_WorksAndLogs()
+        {
+            var userCode = @"public partial class MyGenericService<T>
+{
+    [BuildInfoAnalyzers.Wrapper(typeof(TestWrapper))]
+    public partial T Echo(T value);
+    private T Echo_Implementation(T value) { return value; }
+}";
+            var ctx = CompileAndLoad(userCode);
+            var genericType = ctx.Assembly.GetType("MyGenericService`1")!.MakeGenericType(typeof(string));
+            var instance = Activator.CreateInstance(genericType)!;
+            var echoMethod = genericType.GetMethod("Echo")!;
+            var result = echoMethod.Invoke(instance, new object[] { "test" });
+            Assert.That(result, Is.EqualTo("test"));
+            Assert.That(ctx.Log[0], Does.Contain("Enter:Echo:test"));
+            Assert.That(ctx.Log.Any(l => l.Contains("Exit:Echo:test")));
+        }
     }
 }
