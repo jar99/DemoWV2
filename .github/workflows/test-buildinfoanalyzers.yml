@@ -31,6 +31,9 @@ jobs:
       - name: Build
         run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore
 
+      - name: Build Tests
+        run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
+
       - name: Test
         run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-build --logger trx
 
