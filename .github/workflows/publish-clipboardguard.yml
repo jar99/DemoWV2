@@ -72,7 +72,7 @@ jobs:
           /p:UseAppHost=true `
           /p:PublishTrimmed=true `
           # /p:PublishSingleFile=true `
-          /p:IncludeAllContentForSelfExtract=true `
+          # /p:IncludeAllContentForSelfExtract=true `
           /p:AssemblyVersion="${ASSEMBLY_FILE_VERSION}" `
           /p:FileVersion="${ASSEMBLY_FILE_VERSION}" `
           /p:Version="${PRODUCT_VERSION}" `
