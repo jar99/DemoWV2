@@ -53,7 +53,7 @@ jobs:
         run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --verbosity normal --no-build --logger trx --collect: "XPlat Code Coverage"
+        run: dotnet test BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --verbosity normal --no-build --logger trx --collect "XPlat Code Coverage"
 
       - name: Upload test results
         if: ${{ !cancelled() }}

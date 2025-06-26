@@ -1,0 +1,39 @@
+name: Test Report for BuildInfoAnalyzers
+
+description: >
+  This workflow collects and publishes test results from the BuildInfoAnalyzers test runs as a summary and artifact.
+
+on:
+  workflow_run:
+    workflows:
+      - 'CI Build and Publish BuildInfoAnalyzers'
+      - 'Test BuildInfoAnalyzers'
+    types:
+      - completed
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  test-report:
+    runs-on: windows-latest
+    steps:
+      - name: Download test results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results
+
+      - name: Publish test results summary
+        uses: dorny/test-reporter@v1
+        with:
+          name: BuildInfoAnalyzers Test Results
+          path: ./test-results/*.trx
+          reporter: dotnet-trx
+
+      - name: Upload test results artifact (again, for convenience)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results/*.trx
