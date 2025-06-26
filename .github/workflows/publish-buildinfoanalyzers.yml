@@ -47,12 +47,9 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
+        run: dotnet restore BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj
 
       - name: Build
-        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
-
-      - name: Build Tests
         run: dotnet build BuildInfoAnalyzers.Tests/BuildInfoAnalyzers.Tests.csproj --configuration Release --no-restore
 
       - name: Test
@@ -111,10 +108,7 @@ jobs:
           name: nupkg
           path: ./nupkg
 
-      - name: Add GitHub Packages source
-        run: dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository }}/index.json"
-
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key $GITHUB_TOKEN --source github --skip-duplicate
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key $GITHUB_TOKEN --source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
