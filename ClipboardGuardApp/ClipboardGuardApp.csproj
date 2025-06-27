@@ -1,36 +1,79 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <OutputType>WinExe</OutputType>
-        <TargetFramework>net9.0-windows</TargetFramework>
-        <Nullable>enable</Nullable>
-        <UseWindowsForms>true</UseWindowsForms>
-        <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+  </PropertyGroup>
 
-    <PropertyGroup>
-        <!-- Application Info -->
-        <ApplicationIcon Condition="Exists('appicon.ico')">appicon.ico</ApplicationIcon>
-        <Company Condition="'$(Company)' == ''">Jan Reihl</Company>
-        <Product Condition="'$(Product)' == ''">ClipboardGuardApp</Product>
-        <Copyright Condition="'$(Copyright)' == ''">Copyright © 2025 Jan Reihl. All rights reserved. Licensed under MIT.</Copyright>
+<PropertyGroup>
+    <BuildDate Condition="'$(BuildDate)' == ''">$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd"))</BuildDate>
+    <BuildYear Condition="'$(BuildYear)' == ''">$([System.DateTime]::UtcNow.ToString("yyyy"))</BuildYear>
+    <ReleaseType Condition="'$(ReleaseType)' == ''">dev</ReleaseType>
+    <DefineConstants Condition="'$(ReleaseType)' != 'release'">$(DefineConstants);APP_SHOW_RELEASE_TYPE_INFO</DefineConstants>
+</PropertyGroup>
 
-        <!-- Versioning properties (can be overridden by CI/CD) -->
-        <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.0.0.0</AssemblyVersion>
-        <FileVersion Condition="'$(FileVersion)' == ''">1.0.0.0</FileVersion>
-        <Version Condition="'$(Version)' == ''">1.0.0</Version>
-        <AssemblyInformationalVersion Condition="'$(AssemblyInformationalVersion)' == ''">1.0.0-beta</AssemblyInformationalVersion>
+  <PropertyGroup>
+    <Title>ClipboardGuardApp</Title>
+    <Authors Condition="'$(Authors)' == ''">Jan Reihl</Authors>
+    <Company Condition="'$(Company)' == ''">Jan Reihl</Company>
+    <Product Condition="'$(Product)' == ''">ClipboardGuardApp</Product>
+    <Description Condition="'$(Description)' == ''">ClipboardGuardApp is a demo application for ClipboardGuard, showcasing its features and capabilities.</Description>
+    <Copyright>Copyright © $(BuildYear) $(Company). All rights reserved. Licensed under MIT.</Copyright>
+  </PropertyGroup>
 
-        <SourceRevisionId Condition="'$(SourceRevisionId)' == ''"/>
-        <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/jar99/DemoWV2</RepositoryUrl>
+  <PropertyGroup>
+    <PackageId>ClipboardGuardApp</PackageId>
+    <PackageProjectUrl Condition="'$(PackageProjectUrl)' == ''">https://github.com/jar99/DemoWV2</PackageProjectUrl>
+    <PackageTags>clipboard,windows,winforms,security,demo</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile Condition="Exists('LICENSE.txt')">LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile Condition="Exists('README.md')">README.md</PackageReadmeFile>
+    <PackageIcon Condition="Exists('appicon.ico')">appicon.ico</PackageIcon>
+    <PackageReleaseNotes Condition="Exists('RELEASENOTES')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/RELEASENOTES'))</PackageReleaseNotes>
+  </PropertyGroup>
 
-        <ReleaseType Condition="'$(ReleaseType)' == ''">dev</ReleaseType>
-        <DefineConstants Condition="'$(ReleaseType)' != 'release'">$(DefineConstants);APP_SHOW_RELEASE_TYPE_INFO</DefineConstants>
-    </PropertyGroup>
-    
-    <ItemGroup>
-        <CompilerVisibleProperty Include="RepositoryUrl"/>
+  <PropertyGroup>
+    <RepositoryUrl Condition="'$(RepositoryUrl)' == ''">https://github.com/jar99/DemoWV2</RepositoryUrl>
+    <RepositoryType Condition="'$(RepositoryType)' == ''">git</RepositoryType>
+    <RepositoryBranch Condition="'$(RepositoryBranch)' == ''" />
+    <RepositoryCommit Condition="'$(RepositoryCommit)' == ''" />
+    <RepositoryRevision Condition="'$(RepositoryRevision)' == ''" />
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Version Condition="'$(Version)' != ''">$(Version)</Version>
+    <Version Condition="'$(Version)' == '' and Exists('VERSION')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/VERSION'))</Version>
+    <Version Condition="'$(Version)' == '' and !Exists('VERSION')">0.1.0</Version>
+
+    <BuildNumber Condition="'$(BuildNumber)' == ''">X</BuildNumber>
+
+    <VersionSuffix Condition="'$(VersionSuffix)' == '' and '$(ReleaseType)' != 'release'">$(ReleaseType)</VersionSuffix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == '' and '$(ReleaseType)' == 'release'"></VersionSuffix>
+
+    <!-- AssemblyVersion: only use major version -->
+    <AssemblyVersion Condition="'$(AssemblyVersion)' == ''">1.0.0.0</AssemblyVersion>
+    <!-- FileVersion: increment for every build/release, matches Version by default -->
+    <FileVersion Condition="'$(FileVersion)' == ''">$(Version).$(BuildNumber)</FileVersion>
+    <!-- PackageVersion: NuGet/public version, must be SemVer 2.0.0 compliant -->
+    <PackageVersion Condition="'$(PackageVersion)' == '' and '$(VersionSuffix)' != ''">$(Version)-$(VersionSuffix).$(BuildNumber)</PackageVersion>
+    <PackageVersion Condition="'$(PackageVersion)' == '' and '$(VersionSuffix)' == ''">$(Version).$(BuildNumber)</PackageVersion>
+    <!-- InformationalVersion: for diagnostics, can include build metadata -->
+    <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(Version)-$(VersionSuffix)+$(SourceRevisionId) $(Configuration)/$(TargetFramework)/$(RuntimeIdentifier)</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+  <ItemGroup>
         <CompilerVisibleProperty Include="Version"/>
+        <CompilerVisibleProperty Include="BuildDate"/>
+        <CompilerVisibleProperty Include="RepositoryUrl"/>
         <CompilerVisibleProperty Include="ReleaseType"/>
     </ItemGroup>
 

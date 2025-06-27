@@ -1,0 +1,22 @@
+# Release Notes for ClipboardGuardApp
+
+## 0.1.0
+- Switched to Semantic Versioning 2.0.0 for all build and package versions
+- Build date is now set automatically at build time (UTC, yyyy-MM-dd)
+- Release type and version suffix are unified and CI-aware
+- All build metadata (commit, branch, build number) is embedded in the app
+- Improved CI workflow for reproducible and traceable builds
+- Updated documentation and versioning comments in project files
+
+# Release Notes for ClipboardGuardApp v0.0.1
+
+## 0.0.1 (Initial Release)
+- First public release of ClipboardGuardApp.
+- Demonstrates core ClipboardGuard functionality in a Windows Forms application.
+- Features:
+  - Monitors and protects clipboard content.
+  - Simple and modern user interface.
+  - Displays current clipboard status.
+  - Shows release type and build information in non-release builds.
+- Includes build metadata and repository information in the application.
+- Distributed as a self-contained Windows executable.

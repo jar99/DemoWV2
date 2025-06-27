@@ -48,6 +48,10 @@ namespace BuildInfoAnalyzers
                                   SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers
         );
 
+        /// <summary>
+        /// Initializes the WrapperGenerator and registers the attribute and source output for wrapped methods.
+        /// </summary>
+        /// <param name="context">The Roslyn generator initialization context.</param>
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
             context.RegisterPostInitializationOutput(i => i.AddSource(
@@ -64,6 +68,11 @@ namespace BuildInfoAnalyzers
                 static (spc, method) => Execute(spc, method));
         }
 
+        /// <summary>
+        /// Returns the method symbol if it is decorated with WrapperAttribute and its containing type is partial; otherwise null.
+        /// </summary>
+        /// <param name="context">The generator syntax context.</param>
+        /// <returns>The IMethodSymbol for the wrapped method, or null.</returns>
         private static IMethodSymbol? GetMethodSymbolIfWrapped(GeneratorSyntaxContext context)
         {
             var methodDeclarationSyntax = (MethodDeclarationSyntax)context.Node;
@@ -87,6 +96,11 @@ namespace BuildInfoAnalyzers
             return null;
         }
 
+        /// <summary>
+        /// Generates and adds the wrapper method source file to the compilation for the given method.
+        /// </summary>
+        /// <param name="context">The source production context.</param>
+        /// <param name="method">The method symbol to wrap.</param>
         private static void Execute(SourceProductionContext context, IMethodSymbol method)
         {
             if (method.ContainingType is null) return;
@@ -111,6 +125,13 @@ namespace BuildInfoAnalyzers
                 SourceText.From(source, Encoding.UTF8));
         }
 
+        /// <summary>
+        /// Generates the wrapper method source code for the specified method and wrapper type.
+        /// </summary>
+        /// <param name="method">The method symbol to wrap.</param>
+        /// <param name="wrapperType">The wrapper type symbol.</param>
+        /// <param name="customImplementationMethodName">Optional custom implementation method name.</param>
+        /// <returns>The generated C# source code for the wrapper method.</returns>
         private static string GenerateWrapperMethod(IMethodSymbol method, ITypeSymbol wrapperType,
             string? customImplementationMethodName)
         {

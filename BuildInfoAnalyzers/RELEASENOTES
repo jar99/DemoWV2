@@ -1,0 +1,11 @@
+# BuildInfoAnalyzers Release Notes
+
+## 0.0.1
+- Initial release.
+- Provides a Roslyn analyzer to expose MSBuild properties at compile time.
+- Adds build info to applications via MSBuild integration.
+- Includes support for custom build metadata and easy integration into CI/CD pipelines.
+
+---
+
+For more details, see the project repository: https://github.com/jar99/DemoWV2

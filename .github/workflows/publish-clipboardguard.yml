@@ -6,9 +6,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'App version (e.g., 1.0.0 for 1.0.0.X)'
-        required: true
       release_type:
         description: 'Type of release'
         required: true
@@ -28,6 +25,26 @@ on:
         options:
           - Debug
           - Release
+      runtime:
+        description: 'Target runtime (e.g., win-x64, win-x86)'
+        required: false
+        default: 'win-x64'
+        type: choice
+        options:
+          - win-x64
+          - win-x86
+          - win-arm64
+      verbosity:
+        description: 'Verbosity level for dotnet commands'
+        required: false
+        default: 'minimal'
+        type: choice
+        options:
+          - quiet
+          - minimal
+          - normal
+          - detailed
+          - diagnostic
 
 jobs:
   build_and_publish:
@@ -47,44 +64,79 @@ jobs:
       - name: Build ClipboardGuardApp
         run: dotnet build ClipboardGuardApp/ClipboardGuardApp.csproj --configuration ${{ github.event.inputs.configuration }} --no-restore
 
+      - name: Read version from VERSION file
+        id: get_version
+        run: |
+          $version = Get-Content ClipboardGuardApp/VERSION | Select-Object -First 1
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Read release notes from RELEASENOTES file
+        id: get_releasenotes
+        run: |
+          $releasenotes = Get-Content ClipboardGuardApp/RELEASENOTES -Raw
+          echo "RELEASENOTES=$releasenotes" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "releasenotes=$releasenotes" >> $env:GITHUB_OUTPUT
+
+      - name: Get runtime and platform
+        id: get_runtime_platform
+        run: |
+          $RUNTIME = "${{ github.event.inputs.runtime }}"
+          switch ($RUNTIME) {
+            "win-x64" { $PLATFORM = "x64" }
+            "win-x86" { $PLATFORM = "x86" }
+            "win-arm64" { $PLATFORM = "AnyCPU" }
+            default { $PLATFORM = "AnyCPU" }
+          }
+          echo "RUNTIME=$RUNTIME" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "PLATFORM=$PLATFORM" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "runtime=$RUNTIME" >> $env:GITHUB_OUTPUT
+          echo "platform=$PLATFORM" >> $env:GITHUB_OUTPUT
+
       - name: Publish ClipboardGuardApp
         run: |
-          # Get current year for copyright
-          $CURRENT_YEAR = (Get-Date).Year
+          # Read platform and runtime from environment variables
+          $RUNTIME = "$env:RUNTIME"
+          $PLATFORM = "$env:PLATFORM"
+          $RELEASE_TYPE = "${{ github.event.inputs.release_type }}"
 
-          # Construct AssemblyVersion and FileVersion (e.g., 1.0.0.123)
-          $ASSEMBLY_FILE_VERSION = "${{ github.event.inputs.version }}.${{ github.run_number }}"
+          # Read version and release notes from environment variables
+          $VERSION = "$env:VERSION"
+          $RELEASENOTES = "$env:RELEASENOTES"
 
-          # Construct Product/Package Version (SemVer-compliant, e.g., 1.0.0 or 1.0.0-beta.123)
-          $PRODUCT_VERSION = "${{ github.event.inputs.version }}"
-          if ("${{ github.event.inputs.release_type }}" -ne "release") {
-            $PRODUCT_VERSION = "${{ github.event.inputs.version }}-${{ github.event.inputs.release_type }}.${{ github.run_number }}"
-          }
+          # Get short commit id for SourceRevisionId
+          $SHORT_COMMIT = (git rev-parse --short HEAD).Trim()
+          $RUN_NUMBER = "${{ github.run_number }}"
 
-          # Construct AssemblyInformationalVersion (detailed human-readable, e.g., 1.0.0.123-prerelease-Debug)
-          $INFORMATIONAL_VERSION = "${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}"
+          # Set additional metadata for the build
+          $PACKAGE_PROJECT_URL = "${{ github.server_url }}/${{ github.repository }}"
+          $REPOSITORY_URL = "${{ github.server_url }}/${{ github.repository }}"
+          $REPOSITORY_TYPE = "git"
+          $REPOSITORY_BRANCH = "${{ github.ref_name }}"
+          $REPOSITORY_COMMIT = "${{ github.sha }}"
 
-          #
-          # /p:PublishTrimmed=true `
 
           dotnet publish ClipboardGuardApp/ClipboardGuardApp.csproj `
           --configuration ${{ github.event.inputs.configuration }} `
-          --runtime win-x64 `
+          --runtime $RUNTIME `
           --self-contained true `
           --output publish `
+          /p:Platform="$PLATFORM" `
           /p:UseAppHost=true `
           /p:PublishSingleFile=true `
           /p:IncludeAllContentForSelfExtract=true `
-          /p:AssemblyVersion="${ASSEMBLY_FILE_VERSION}" `
-          /p:FileVersion="${ASSEMBLY_FILE_VERSION}" `
-          /p:Version="${PRODUCT_VERSION}" `
-          /p:AssemblyInformationalVersion="${INFORMATIONAL_VERSION}" `
           /p:Company="${{ github.repository_owner }}" `
-          /p:Product="${{ github.repository }}" `
-          /p:Copyright="Copyright © ${CURRENT_YEAR} ${{ github.repository_owner }}. All rights reserved. Licensed under MIT." `
-          /p:SourceRevisionId="${{ github.sha }}" `
-          /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" `
-          /p:ReleaseType="${{ github.event.inputs.release_type }}"
+          /p:Authors="${{ github.repository_owner }}" `
+          /p:SourceRevisionId="$SHORT_COMMIT" `
+          /p:BuildNumber="$RUN_NUMBER" `
+          /p:ReleaseType="$RELEASE_TYPE" `
+          /p:RepositoryUrl="$REPOSITORY_URL" `
+          /p:PackageProjectUrl="$PACKAGE_PROJECT_URL" `
+          /p:RepositoryType="$REPOSITORY_TYPE" `
+          /p:RepositoryBranch="$REPOSITORY_BRANCH" `
+          /p:RepositoryCommit="$REPOSITORY_COMMIT" `
+          /p:PackageReleaseNotes="$RELEASENOTES" `
+          --nologo --verbosity ${{ github.event.inputs.verbosity }}`
 
       - name: Archive published artifact
         uses: actions/upload-artifact@v4

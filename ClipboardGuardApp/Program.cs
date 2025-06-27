@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using System.Reflection;
+using MethodInvoker = System.Windows.Forms.MethodInvoker;
 
 namespace ClipboardGuardApp
 {

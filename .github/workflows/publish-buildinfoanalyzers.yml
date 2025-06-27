@@ -3,25 +3,63 @@ name: CI Build and Publish BuildInfoAnalyzers
 on:
   workflow_dispatch:
     inputs:
-      release_type:
-        description: 'Release type (e.g., release, beta, alpha, dev)'
+      configuration:
+        description: 'Build configuration (e.g., Release, Debug)'
         required: false
-        default: 'release'
-      skip_tests:
-        description: 'Skip running tests?'
+        default: 'Release'
+        type: choice
+        options:
+          - Release
+          - Debug
+      verbosity:
+        description: 'Verbosity level for dotnet commands'
         required: false
-        default: false
-        type: boolean
+        default: 'minimal'
+        type: choice
+        options:
+          - quiet
+          - minimal
+          - normal
+          - detailed
+          - diagnostic
       warn_as_error:
         description: 'Treat warnings as errors?'
         required: false
         default: false
         type: boolean
-      verbosity:
-        description: 'Verbosity level for dotnet commands (quiet, minimal, normal, detailed, diagnostic)'
+      skip_tests:
+        description: 'Skip running tests?'
         required: false
-        default: 'minimal'
-        type: string
+        default: false
+        type: boolean
+      release_type:
+        description: 'Release type (e.g., release, beta, alpha, dev)'
+        required: false
+        default: 'release'
+      platform:
+        description: 'Build platform (e.g., AnyCPU, x64, x86)'
+        required: false
+        default: 'AnyCPU'
+        type: choice
+        options:
+          - AnyCPU
+          - x64
+          - x86
+      target_framework:
+        description: 'Target framework (e.g., netstandard2.0, netcoreapp3.1)'
+        required: false
+        default: 'netstandard2.0'
+        type: choice
+        options:
+          - netstandard2.0
+          - netcoreapp3.1
+          - net5.0
+          - net6.0
+          - net7.0
+          - net8.0
+
+permissions:
+  packages: write
 
 jobs:
   build:
@@ -49,7 +87,7 @@ jobs:
         run: dotnet restore BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
 
       - name: Build
-        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-restore ${{ github.event.inputs.warn_as_error == 'true' && '--warnaserror' || '' }} --nologo --verbosity ${{ github.event.inputs.verbosity }}
+        run: dotnet build BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration ${{ github.event.inputs.configuration }} --no-restore ${{ github.event.inputs.warn_as_error == 'true' && '--warnaserror' || '' }} --nologo --verbosity ${{ github.event.inputs.verbosity }} /p:Configuration=${{ github.event.inputs.configuration }} /p:Platform=${{ github.event.inputs.platform }} /p:TargetFramework=${{ github.event.inputs.target_framework || 'netstandard2.0' }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -137,20 +175,37 @@ jobs:
           name: build-output
           path: BuildInfoAnalyzers
 
-      - name: Read package version from .csproj, append git hash and release type
+      - name: Read package version from VERSION file, append git hash, platform, and framework
         id: get_version
         run: |
-          [xml]$proj = Get-Content BuildInfoAnalyzers/BuildInfoAnalyzers.csproj
-          $baseVersion = $proj.Project.PropertyGroup | Where-Object { $_.PackageVersion } | Select-Object -ExpandProperty PackageVersion -First 1
-          if (-not $baseVersion) { $baseVersion = "0.0.1" }
+          $baseVersion = Get-Content BuildInfoAnalyzers/VERSION | Select-Object -First 1
           $releaseType = if ($env:RELEASE_TYPE) { $env:RELEASE_TYPE } else { "release" }
+          $platform = if ($env:platform) { $env:platform } else { "AnyCPU" }
+          $framework = if ($env:target_framework) { $env:target_framework } else { "netstandard2.0" }
           $gitHash = (git rev-parse --short HEAD).Trim()
-          $version = "$baseVersion-$releaseType-$gitHash"
-          echo "PACKAGE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "package_version=$version" >> $env:GITHUB_OUTPUT
+
+          # Mark as prerelease if release_type is not 'release'
+          if ($releaseType -ne "release") {
+            $suffix = "$releaseType-$platform-$framework-$gitHash"
+          } else {
+            $suffix = "$platform-$framework-$gitHash"
+          }
+
+          echo "PACKAGE_VERSION=$baseVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "PACKAGE_SUFFIX=$suffix" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          echo "package_version=$baseVersion" >> $env:GITHUB_OUTPUT
+          echo "package_suffix=$suffix" >> $env:GITHUB_OUTPUT
 
       - name: Pack NuGet package
-        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg /p:PackageVersion=${{ env.PACKAGE_VERSION }} /p:ContinuousIntegrationBuild=true --nologo --verbosity ${{ github.event.inputs.verbosity }}
+        run: dotnet pack BuildInfoAnalyzers/BuildInfoAnalyzers.csproj --configuration Release --no-build --output ./nupkg \
+          /p:PackageVersion=${{ env.PACKAGE_VERSION }} \
+          /p:PackageVersionSuffix=${{ env.PACKAGE_SUFFIX }} \
+          /p:ContinuousIntegrationBuild=true \
+          /p:Authors="Jan Reihl" \
+          /p:RepositoryUrl="https://github.com/jar99/DemoWV2" \
+          /p:PackageReleaseNotes="Tool to add build info to applications." \
+          --nologo --verbosity ${{ github.event.inputs.verbosity }}
 
       - name: Upload nupkg artifact
         uses: actions/upload-artifact@v4

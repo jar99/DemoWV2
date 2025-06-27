@@ -26,6 +26,10 @@ public class BuildInfoSourceGenerator : IIncrementalGenerator
 
                                          """;
 
+    /// <summary>
+    /// Initializes the BuildInfoSourceGenerator and registers the attribute and source output.
+    /// </summary>
+    /// <param name="context">The Roslyn generator initialization context.</param>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Inject the attribute source into the user's compilation
@@ -52,6 +56,11 @@ public class BuildInfoSourceGenerator : IIncrementalGenerator
             static (spc, source) => Execute(spc, source.Left, source.Right));
     }
 
+    /// <summary>
+    /// Gets the semantic symbol for a partial static class named BuildInfo, or null if not valid.
+    /// </summary>
+    /// <param name="context">The generator syntax context.</param>
+    /// <returns>The INamedTypeSymbol for the BuildInfo class, or null.</returns>
     private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax)context.Node;
@@ -69,6 +78,12 @@ public class BuildInfoSourceGenerator : IIncrementalGenerator
         return null;
     }
 
+    /// <summary>
+    /// Generates and adds the BuildInfo source file to the compilation.
+    /// </summary>
+    /// <param name="context">The source production context.</param>
+    /// <param name="classSymbol">The BuildInfo class symbol.</param>
+    /// <param name="options">The analyzer config options (MSBuild properties).</param>
     private static void Execute(SourceProductionContext context, INamedTypeSymbol classSymbol,
         AnalyzerConfigOptions options)
     {
@@ -79,7 +94,12 @@ public class BuildInfoSourceGenerator : IIncrementalGenerator
         context.AddSource($"{classSymbol.Name}.g.cs", SourceText.From(sourceCode, Encoding.UTF8));
     }
 
-    // This method is now internal and static, making it easy to unit test.
+    /// <summary>
+    /// Generates the source code for the BuildInfo class based on the symbol and MSBuild options.
+    /// </summary>
+    /// <param name="classSymbol">The BuildInfo class symbol.</param>
+    /// <param name="options">The analyzer config options (MSBuild properties).</param>
+    /// <returns>The generated C# source code for the BuildInfo class.</returns>
     internal static string GenerateSource(INamedTypeSymbol classSymbol, AnalyzerConfigOptions options)
     {
         var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();

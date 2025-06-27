@@ -1,20 +1,17 @@
-﻿namespace ClipboardGuardApp;
+using BuildInfoAnalyzers;
 
+namespace ClipboardGuardApp;
+
+/// <summary>
+/// Example build info class using the CompilerVisibleProperty attribute.
+/// </summary>
 public static partial class BuildInfo
 {
-    [BuildInfoAnalyzers.CompilerVisibleProperty]
-    public static partial string RepositoryUrl { get; }
+    [CompilerVisibleProperty] public static partial string Version { get; }
 
-    [BuildInfoAnalyzers.CompilerVisibleProperty]
-    public static partial string Version { get; }
+    [CompilerVisibleProperty] public static partial string BuildDate { get; }
 
-    [BuildInfoAnalyzers.CompilerVisibleProperty]
-    public static partial string ReleaseType { get; }
+    [CompilerVisibleProperty] public static partial string RepositoryUrl { get; }
 
-
-    public static void test()
-    {
-        var t = test;
-        Console.WriteLine();
-    }
+    [CompilerVisibleProperty] public static partial string ReleaseType { get; }
 }

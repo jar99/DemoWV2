@@ -15,16 +15,17 @@
 
     <PropertyGroup>
         <PackageId>BuildInfoAnalyzers</PackageId>
-        <PackageVersion>0.0.1</PackageVersion>
-        <Authors>Jan Reihl</Authors>
-        <RepositoryUrl>https://github.com/jar99/DemoWV2</RepositoryUrl>
+        <PackageVersion>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/VERSION'))</PackageVersion>
+        <Authors Condition=" '$(Authors)' == '' ">Jan</Authors>
+        <RepositoryUrl Condition=" '$(RepositoryUrl)' == '' ">https://github.com/jar99/DemoWV2</RepositoryUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <Description>A Roslyn analyzer to expose MSBuild properties at compile time.</Description>
-        <PackageReleaseNotes>Tool to add build info to applications.</PackageReleaseNotes>
+        <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/RELEASENOTES'))</PackageReleaseNotes>
         <Copyright>Copyright</Copyright>
         <PackageTags>roslyn,analyzer,build,buildinfo</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
@@ -43,4 +44,5 @@
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false"/>
     </ItemGroup>
+
 </Project>
