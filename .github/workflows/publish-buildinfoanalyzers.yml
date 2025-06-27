@@ -203,8 +203,7 @@ jobs:
           /p:PackageVersionSuffix=${{ env.PACKAGE_SUFFIX }} \
           /p:ContinuousIntegrationBuild=true \
           /p:Authors="Jan Reihl" \
-          /p:RepositoryUrl="https://github.com/jar99/DemoWV2" \
-          /p:PackageReleaseNotes="Tool to add build info to applications." \
+          /p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" \
           --nologo --verbosity ${{ github.event.inputs.verbosity }}
 
       - name: Upload nupkg artifact

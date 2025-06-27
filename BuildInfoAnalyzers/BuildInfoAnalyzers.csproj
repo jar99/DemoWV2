@@ -20,7 +20,7 @@
         <RepositoryUrl Condition=" '$(RepositoryUrl)' == '' ">https://github.com/jar99/DemoWV2</RepositoryUrl>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <Description>A Roslyn analyzer to expose MSBuild properties at compile time.</Description>
-        <PackageReleaseNotes>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/RELEASENOTES'))</PackageReleaseNotes>
+        <PackageReleaseNotes Condition="Exists('RELEASENOTES')">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/RELEASENOTES'))</PackageReleaseNotes>
         <Copyright>Copyright</Copyright>
         <PackageTags>roslyn,analyzer,build,buildinfo</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>

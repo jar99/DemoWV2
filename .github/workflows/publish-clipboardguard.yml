@@ -120,13 +120,13 @@ jobs:
           /p:Company="${{ github.repository_owner }}" `
           /p:Authors="${{ github.repository_owner }}" `
           /p:SourceRevisionId="$SHORT_COMMIT" `
-          /p:BuildNumber="$RUN_NUMBER" `
-          /p:ReleaseType="$RELEASE_TYPE" `
-          /p:RepositoryUrl="$REPOSITORY_URL" `
-          /p:PackageProjectUrl="$PACKAGE_PROJECT_URL" `
-          /p:RepositoryType="$REPOSITORY_TYPE" `
-          /p:RepositoryBranch="$REPOSITORY_BRANCH" `
-          /p:RepositoryCommit="$REPOSITORY_COMMIT" `
+          /p:BuildNumber=$RUN_NUMBER `
+          /p:ReleaseType=$RELEASE_TYPE `
+          /p:RepositoryUrl=$REPOSITORY_URL `
+          /p:PackageProjectUrl=$PACKAGE_PROJECT_URL `
+          /p:RepositoryType=$REPOSITORY_TYPE `"
+          /p:RepositoryBranch=$REPOSITORY_BRANCH `
+          /p:RepositoryCommit=$REPOSITORY_COMMIT `
           --nologo --verbosity ${{ github.event.inputs.verbosity }}`
 
       - name: Archive published artifact
@@ -142,15 +142,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ github.event.inputs.version }}
-          name: ClipboardGuardApp Release v${{ github.event.inputs.version }} (Build ${{ github.run_number }})
+          tag_name: v${{ env.VERSION }}
+          name: ClipboardGuardApp Release v${{ env.VERSION }} (Build ${{ github.run_number }})
           body: |
             ## Release Details
-            - **Version:** ${{ github.event.inputs.version }}
+            - **Version:** ${{ env.VERSION }}
             - **Build Number:** ${{ github.run_number }}
             - **Release Type:** ${{ github.event.inputs.release_type }}
             - **Configuration:** ${{ github.event.inputs.configuration }}
-            - **Informational Version:** ${{ github.event.inputs.version }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}
+            - **Informational Version:** ${{ env.VERSION }}.${{ github.run_number }}-${{ github.event.inputs.release_type }}-${{ github.event.inputs.configuration }}
             - **Commit SHA:** ${{ github.sha }}
             - **Repository:** ${{ github.server_url }}/${{ github.repository }}
 
