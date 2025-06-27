@@ -71,13 +71,6 @@ jobs:
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
-      - name: Read release notes from RELEASENOTES file
-        id: get_releasenotes
-        run: |
-          $releasenotes = Get-Content ClipboardGuardApp/RELEASENOTES -Raw
-          echo "RELEASENOTES=$releasenotes" | Out-File -FilePath $env:GITHUB_ENV -Append
-          echo "releasenotes=$releasenotes" >> $env:GITHUB_OUTPUT
-
       - name: Get runtime and platform
         id: get_runtime_platform
         run: |
@@ -100,9 +93,8 @@ jobs:
           $PLATFORM = "$env:PLATFORM"
           $RELEASE_TYPE = "${{ github.event.inputs.release_type }}"
 
-          # Read version and release notes from environment variables
+          # Read version from environment variables
           $VERSION = "$env:VERSION"
-          $RELEASENOTES = "$env:RELEASENOTES"
 
           # Get short commit id for SourceRevisionId
           $SHORT_COMMIT = (git rev-parse --short HEAD).Trim()
@@ -135,7 +127,6 @@ jobs:
           /p:RepositoryType="$REPOSITORY_TYPE" `
           /p:RepositoryBranch="$REPOSITORY_BRANCH" `
           /p:RepositoryCommit="$REPOSITORY_COMMIT" `
-          /p:PackageReleaseNotes="$RELEASENOTES" `
           --nologo --verbosity ${{ github.event.inputs.verbosity }}`
 
       - name: Archive published artifact
